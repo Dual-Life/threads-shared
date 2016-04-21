@@ -1,5 +1,10 @@
 Revision history for Perl extension threads::shared.
 
+1.22 Tue Jun 10 17:15:36 2008
+	- Upgraded ppport.h to Devel::PPPort 3.14
+	- LICENSE section in POD
+	- End all tests with exit(0)
+
 1.21 Wed May 14 15:15:44 2008
 	- Added shared_clone()
 	- Fixed is_shared($x->{elem}) and the like
