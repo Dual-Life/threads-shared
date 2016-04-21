@@ -24,7 +24,7 @@ sub ok {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..11\n" };
+BEGIN { print "1..13\n" };
 
 use threads;
 use threads::shared;
@@ -61,5 +61,8 @@ ok(10, ref($av->[0]) eq 'ARRAY');
 threads->create(sub { push @{$av->[0]}, \@av })->join();
 threads->create(sub { $av[0] = 'testtest'})->join();
 threads->create(sub { ok(11, $av->[0]->[0]->[0] eq 'testtest')})->join();
+
+ok(12, is_shared($sv), "Check for sharing");
+ok(13, is_shared(@av), "Check for sharing");
 
 # EOF

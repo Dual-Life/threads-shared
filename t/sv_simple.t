@@ -24,7 +24,7 @@ sub ok {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..10\n" };
+BEGIN { print "1..11\n" };
 
 use threads;
 use threads::shared;
@@ -50,5 +50,7 @@ threads->create(sub { $test = "barbarbar" })->join;
 ok(9, length($test) == 9, "Check length code after different thread modified it");
 threads->create(sub { undef($test)})->join();
 ok(10, !defined($test), "Check undef value");
+
+ok(11, is_shared($test), "Check for sharing");
 
 # EOF

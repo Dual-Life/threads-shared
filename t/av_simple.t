@@ -24,7 +24,7 @@ sub ok {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..43\n" };
+BEGIN { print "1..44\n" };
 
 use threads;
 use threads::shared;
@@ -121,5 +121,7 @@ ok(37, !defined delete($foo[0]), "Check that delete works from a thread");
     };
     ok(43, my $temp1 = $@ =~/Splice not implemented for shared arrays/, "Check that the warning message is correct for non splice");
 }
+
+ok(44, is_shared(@foo), "Check for sharing");
 
 # EOF

@@ -24,7 +24,7 @@ sub ok {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..5\n" };
+BEGIN { print "1..6\n" };
 
 our $warnmsg;
 BEGIN {
@@ -48,5 +48,7 @@ threads->create(
                    })->join();
 # Value should either remain unchanged or be value set by other thread
 ok(5,$test eq "bar" || $test eq 'baz',"Test that value is an expected one");
+
+ok(6, ! is_shared($test), "Check for sharing");
 
 # EOF

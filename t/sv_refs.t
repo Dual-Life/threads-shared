@@ -29,7 +29,7 @@ sub ok {
 use Devel::Peek;
 
 use ExtUtils::testlib;
-BEGIN { print "1..10\n" };
+BEGIN { print "1..11\n" };
 
 use threads;
 use threads::shared;
@@ -68,5 +68,7 @@ $t2 = "text";
 $t1 = \$t2;
 threads->create(sub { $t1 = "bar" })->join();
 ok(10,$t1 eq 'bar',"Check that assign to a ROK works");
+
+ok(11, is_shared($foo), "Check for sharing");
 
 # EOF

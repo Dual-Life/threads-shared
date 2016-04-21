@@ -29,7 +29,7 @@ sub skip {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..18\n" };
+BEGIN { print "1..20\n" };
 
 use threads;
 use threads::shared;
@@ -101,5 +101,8 @@ ok(10, keys %foo == 0, "And make sure we realy have deleted the values");
     bless $object, 'test2';
     ok(18, ref($test{object}) eq 'test2', "reblessing works!");
 }
+
+ok(19, is_shared($foo), "Check for sharing");
+ok(20, is_shared(%foo), "Check for sharing");
 
 # EOF

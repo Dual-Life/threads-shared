@@ -1,6 +1,11 @@
 Revision history for Perl extension threads::shared.
 
-0.94 Tue Jan 10 00:00:00 2006
+0.96 Mon Feb 27 16:50:07 EST 2006
+	- Added 'is_shared' as alias to '_id'
+	- Upgraded ppport.h to v3.08
+	- Updated POD with discussion of bless()
+
+0.95 Fri Feb 03 16:46:00 2006
 	- Initial release to CPAN
 	- 'bless' is now supported on shared refs
 

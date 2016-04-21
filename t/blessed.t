@@ -32,7 +32,7 @@ use ExtUtils::testlib;
 BEGIN { print "1..36\n" };
 
 use threads;
-use threads::shared;
+use threads::shared qw(share bless);
 
 my ($hobj, $aobj, $sobj) : shared;
 

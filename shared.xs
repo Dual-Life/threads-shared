@@ -27,11 +27,11 @@
  *
  * Aggregates (AVs and HVs) are implemented using tie magic, except that
  * the vtable used is one defined in this file rather than the standard one.
- * This means that where a tie function like is FETCH is normally invoked by
+ * This means that where a tie function like FETCH is normally invoked by
  * the tie magic's mg_get() function, we completely bypass the calling of a
  * perl-level function, and directly call C-level code to handle it. On
- * the other hand. calls to functions like PUSH are done directly by code
- * in av.c etc, which we can't bypass. So the best we can do is to provide
+ * the other hand, calls to functions like PUSH are done directly by code
+ * in av.c, etc., which we can't bypass. So the best we can do is to provide
  * XS versions of these functions. We also have to attach a tie object,
  * blessed into the class threads::shared::tie, to keep the method-calling
  * code happy.
@@ -98,21 +98,37 @@
  * Note that PERL_MAGIC_tiedelem(p) magic doesn't have a pointer to a
  * shared SV in mg_ptr; instead this is used to store the hash key,
  * if any, like normal tied elements. Note also that element SVs may have
- * pointers to both the shared aggregate and the shared element
+ * pointers to both the shared aggregate and the shared element.
  *
  *
  * Userland locks:
  *
- * if a shared variable is used as a perl-level lock or condition
+ * If a shared variable is used as a perl-level lock or condition
  * variable, then PERL_MAGIC_ext magic is attached to the associated
- * *shared* SV, whose mg_ptr field points to a malloced structure
+ * *shared* SV, whose mg_ptr field points to a malloc'ed structure
  * containing the necessary mutexes and condition variables.
  *
  * Nomenclature:
  *
- * In this file, any variable name prefixed with 's', eg ssv, stmp or sobj,
- * usually represents a shared SV which correspondis to a private SV named
- * without the prefix, eg sv, tmp or obj.
+ * In this file, any variable name prefixed with 's' (e.g., ssv, stmp or sobj)
+ * usually represents a shared SV which corresponds to a private SV named
+ * without the prefix (e.g., sv, tmp or obj).
+ */
+
+/* Patch status:
+ *
+ * Perl 5.8.8 contains threads::shared patches up to 26626 (equivalent to
+ * blead patches 26350+26351).
+ *
+ * The CPAN version of threads::shared contains the following blead patches:
+ *      26684
+ *      26693
+ *      26695
+ *
+ * Blead patch 26569 contains a fix for 'local $shared'.  It cannot yet be
+ * applied to the CPAN version of this module because it also contains changes
+ * to mg.c/h which are outside this module.  (The API changes related to patch
+ * 26569 are documented in patch 26735.)
  */
 
 #define PERL_NO_GET_CONTEXT
@@ -130,8 +146,8 @@
 PerlInterpreter *PL_sharedsv_space;             /* The shared sv space */
 /* To access shared space we fake aTHX in this scope and thread's context */
 
-/* bug #24255: we include ENTER+SAVETMPS/FREETMPS+LEAVE with
- * SHARED_CONTEXT/CALLER_CONTEXT macros, so that any mortals etc created
+/* Bug #24255: We include ENTER+SAVETMPS/FREETMPS+LEAVE with
+ * SHARED_CONTEXT/CALLER_CONTEXT macros, so that any mortals, etc. created
  * while in the shared interpreter context don't languish */
 
 #define SHARED_CONTEXT                                  \
@@ -145,7 +161,7 @@ PerlInterpreter *PL_sharedsv_space;             /* The shared sv space */
 /* So we declare _another_ copy of the aTHX variable ... */
 #define dTHXc PerlInterpreter *caller_perl = aTHX
 
-/* and use it to switch back */
+/* ... and use it to switch back */
 #define CALLER_CONTEXT                                  \
     STMT_START {                                        \
         FREETMPS;                                       \
@@ -168,7 +184,7 @@ typedef struct {
 #endif
 } recursive_lock_t;
 
-recursive_lock_t PL_sharedsv_lock;       /* Mutex protecting the shared sv space */
+recursive_lock_t PL_sharedsv_lock;   /* Mutex protecting the shared sv space */
 
 void
 recursive_lock_init(pTHX_ recursive_lock_t *lock)
@@ -202,7 +218,7 @@ recursive_lock_release(pTHX_ recursive_lock_t *lock)
 }
 
 void
-recursive_lock_acquire(pTHX_ recursive_lock_t *lock,char *file,int line)
+recursive_lock_acquire(pTHX_ recursive_lock_t *lock, char *file, int line)
 {
     assert(aTHX);
     MUTEX_LOCK(&lock->mutex);
@@ -234,7 +250,7 @@ recursive_lock_acquire(pTHX_ recursive_lock_t *lock,char *file,int line)
         recursive_lock_acquire(aTHX_ &PL_sharedsv_lock, __FILE__, __LINE__);\
     } STMT_END
 
-/* the unlocking is done automatically at scope exit */
+/* The unlocking is done automatically at scope exit */
 #define LEAVE_LOCK      LEAVE
 
 
@@ -245,7 +261,7 @@ recursive_lock_acquire(pTHX_ recursive_lock_t *lock,char *file,int line)
         SHARED_CONTEXT; \
     } STMT_END
 
-/* then switch out and release access. */
+/* ... then switch out and release access. */
 #define SHARED_RELEASE  \
     STMT_START {        \
         CALLER_CONTEXT; \
@@ -253,17 +269,17 @@ recursive_lock_acquire(pTHX_ recursive_lock_t *lock,char *file,int line)
     } STMT_END
 
 
-/* user-level locks:
+/* User-level locks:
    This structure is attached (using ext magic) to any shared SV that
    is used by user-level locking or condition code
 */
 
 typedef struct {
-    recursive_lock_t    lock;           /* for user-levl locks */
+    recursive_lock_t    lock;           /* For user-levl locks */
     perl_cond           user_cond;      /* For user-level conditions */
 } user_lock;
 
-/* magic used for attaching user_lock structs to shared SVs
+/* Magic used for attaching user_lock structs to shared SVs
 
    The vtable used has just one entry - when the SV goes away
    we free the memory for the above.
@@ -303,16 +319,16 @@ MGVTBL sharedsv_uesrlock_vtbl = {
    the shared thing.
  */
 
-MGVTBL sharedsv_scalar_vtbl;    /* scalars have this vtable */
-MGVTBL sharedsv_array_vtbl;     /* hashes and arrays have this - like 'tie' */
-MGVTBL sharedsv_elem_vtbl;      /* elements of hashes and arrays have this
+MGVTBL sharedsv_scalar_vtbl;    /* Scalars have this vtable */
+MGVTBL sharedsv_array_vtbl;     /* Hashes and arrays have this - like 'tie' */
+MGVTBL sharedsv_elem_vtbl;      /* Elements of hashes and arrays have this
                                    _AS WELL AS_ the scalar magic:
    The sharedsv_elem_vtbl associates the element with the array/hash and
    the sharedsv_scalar_vtbl associates it with the value
  */
 
 
-/* get shared aggregate SV pointed to by threads::shared::tie magic object */
+/* Get shared aggregate SV pointed to by threads::shared::tie magic object */
 
 STATIC SV *
 S_sharedsv_from_obj(pTHX_ SV *sv)
@@ -331,7 +347,7 @@ S_get_userlock(pTHX_ SV* ssv, bool create)
     user_lock *ul = NULL;
 
     assert(ssv);
-    /* XXX redsign the storage of user locks so we dont need a global
+    /* XXX Redesign the storage of user locks so we don't need a global
      * lock to access them ???? DAPM */
     ENTER_LOCK;
     mg = mg_find(ssv, PERL_MAGIC_ext);
@@ -342,7 +358,7 @@ S_get_userlock(pTHX_ SV* ssv, bool create)
         SHARED_CONTEXT;
         ul = (user_lock *) PerlMemShared_malloc(sizeof(user_lock));
         Zero(ul, 1, user_lock);
-        /* attach to shared SV using ext magic */
+        /* Attach to shared SV using ext magic */
         sv_magicext(ssv, NULL, PERL_MAGIC_ext, &sharedsv_uesrlock_vtbl,
                (char *)ul, 0);
         recursive_lock_init(aTHX_ &ul->lock);
@@ -393,8 +409,8 @@ Perl_sharedsv_find(pTHX_ SV *sv)
 }
 
 
-/* associate a private SV  with a shared SV by pointing the appropriate
- * magics at it.  Assumes lock is held */
+/* Associate a private SV  with a shared SV by pointing the appropriate
+ * magics at it.  Assumes lock is held. */
 
 void
 Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
@@ -416,12 +432,12 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
             || (SV*) mg->mg_ptr != ssv)
         {
             SV *obj = newSV(0);
-            sv_setref_iv(obj, "threads::shared::tie",PTR2IV(ssv));
+            sv_setref_iv(obj, "threads::shared::tie", PTR2IV(ssv));
             if (mg) {
                 sv_unmagic(sv, PERL_MAGIC_tied);
             }
             mg = sv_magicext(sv, obj, PERL_MAGIC_tied, &sharedsv_array_vtbl,
-                            (char *) ssv, 0);
+                            (char *)ssv, 0);
             mg->mg_flags |= (MGf_COPY|MGf_DUP);
             SvREFCNT_inc(ssv);
             SvREFCNT_dec(obj);
@@ -444,12 +460,13 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
         }
         break;
     }
+
     assert ( Perl_sharedsv_find(aTHX_ sv) == ssv );
 }
 
 
 /* Given a private SV, create and return an associated shared SV.
- * Assumes lock is held */
+ * Assumes lock is held. */
 
 STATIC SV *
 S_sharedsv_new_shared(pTHX_ SV *sv)
@@ -462,7 +479,7 @@ S_sharedsv_new_shared(pTHX_ SV *sv)
 
     SHARED_CONTEXT;
     ssv = newSV(0);
-    SvREFCNT(ssv) = 0; /* will be upped to 1 by Perl_sharedsv_associate */
+    SvREFCNT(ssv) = 0; /* Will be upped to 1 by Perl_sharedsv_associate */
     sv_upgrade(ssv, SvTYPE(sv));
     CALLER_CONTEXT;
     Perl_sharedsv_associate(aTHX_ sv, ssv);
@@ -471,7 +488,7 @@ S_sharedsv_new_shared(pTHX_ SV *sv)
 
 
 /* Given a shared SV, create and return an associated private SV.
- * Assumes lock is held */
+ * Assumes lock is held. */
 
 STATIC SV *
 S_sharedsv_new_private(pTHX_ SV *ssv)
@@ -488,7 +505,7 @@ S_sharedsv_new_private(pTHX_ SV *ssv)
 }
 
 
-/* a threadsafe version of SvREFCNT_dec(ssv) */
+/* A threadsafe version of SvREFCNT_dec(ssv) */
 
 STATIC void
 S_sharedsv_dec(pTHX_ SV* ssv)
@@ -497,7 +514,7 @@ S_sharedsv_dec(pTHX_ SV* ssv)
         return;
     ENTER_LOCK;
     if (SvREFCNT(ssv) > 1) {
-        /* no side effects, so can do it lightweight */
+        /* No side effects, so can do it lightweight */
         SvREFCNT_dec(ssv);
     }
     else {
@@ -509,7 +526,7 @@ S_sharedsv_dec(pTHX_ SV* ssv)
     LEAVE_LOCK;
 }
 
-/* implements Perl-level share() and :shared */
+/* Implements Perl-level share() and :shared */
 
 void
 Perl_sharedsv_share(pTHX_ SV *sv)
@@ -541,7 +558,7 @@ Perl_sharedsv_share(pTHX_ SV *sv)
     } while (0)
 #endif /* WIN32 || OS2 */
 
-/* do OS-specific condition timed wait */
+/* Do OS-specific condition timed wait */
 
 bool
 Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
@@ -584,7 +601,7 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
     if (rc == ERROR_INTERRUPT) errno = EINTR;
     MUTEX_LOCK(mut);
     return got_it;
-#    else         /* hope you're I_PTHREAD! */
+#    else         /* Hope you're I_PTHREAD! */
     struct timespec ts;
     int got_it = 0;
 
@@ -606,7 +623,7 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
 }
 
 
-/* given a shared RV, copy it's value to a private RV, also coping the
+/* Given a shared RV, copy it's value to a private RV, also copying the
  * object status of the referent.
  * If the private side is already an appropriate RV->SV combination, keep
  * it if possible.
@@ -623,7 +640,7 @@ S_get_RV(pTHX_ SV *sv, SV *ssv) {
             )
         )
     {
-        /* can't reuse obj */
+        /* Can't reuse obj */
         if (SvROK(sv))  {
             SvREFCNT_dec(SvRV(sv));
         }
@@ -637,12 +654,12 @@ S_get_RV(pTHX_ SV *sv, SV *ssv) {
     }
 
     if (SvOBJECT(obj)) {
-        /* remove any old blessing */
+        /* Remove any old blessing */
         SvREFCNT_dec(SvSTASH(obj));
         SvOBJECT_off(obj);
     }
     if (SvOBJECT(sobj)) {
-        /* add any new old blessing */
+        /* Add any new old blessing */
         STRLEN len;
         char* stash_ptr = SvPV((SV*) SvSTASH(sobj), len);
         HV* stash = gv_stashpvn(stash_ptr, len, TRUE);
@@ -654,7 +671,7 @@ S_get_RV(pTHX_ SV *sv, SV *ssv) {
 
 /* ------------ PERL_MAGIC_shared_scalar(n) functions -------------- */
 
-/* get magic for PERL_MAGIC_shared_scalar(n) */
+/* Get magic for PERL_MAGIC_shared_scalar(n) */
 
 int
 sharedsv_scalar_mg_get(pTHX_ SV *sv, MAGIC *mg)
@@ -673,9 +690,9 @@ sharedsv_scalar_mg_get(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-/* copy the contents of a private SV to a shared SV:
- * used by various mg_set()-type functions.
- * Assumes lock is held */
+/* Copy the contents of a private SV to a shared SV.
+ * Used by various mg_set()-type functions.
+ * Assumes lock is held. */
 
 void
 sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
@@ -721,7 +738,7 @@ sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
     }
 }
 
-/* set magic for PERL_MAGIC_shared_scalar(n) */
+/* Set magic for PERL_MAGIC_shared_scalar(n) */
 
 int
 sharedsv_scalar_mg_set(pTHX_ SV *sv, MAGIC *mg)
@@ -740,7 +757,7 @@ sharedsv_scalar_mg_set(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-/* free magic for PERL_MAGIC_shared_scalar(n) */
+/* Free magic for PERL_MAGIC_shared_scalar(n) */
 
 int
 sharedsv_scalar_mg_free(pTHX_ SV *sv, MAGIC *mg)
@@ -771,7 +788,7 @@ MGVTBL sharedsv_scalar_vtbl = {
 
 /* ------------ PERL_MAGIC_tiedelem(p) functions -------------- */
 
-/* get magic for PERL_MAGIC_tiedelem(p) */
+/* Get magic for PERL_MAGIC_tiedelem(p) */
 
 int
 sharedsv_elem_mg_FETCH(pTHX_ SV *sv, MAGIC *mg)
@@ -803,7 +820,7 @@ sharedsv_elem_mg_FETCH(pTHX_ SV *sv, MAGIC *mg)
             S_get_RV(aTHX_ sv, *svp);
         }
         else {
-            /* XXX can this branch ever happen? DAPM */
+            /* XXX Can this branch ever happen? DAPM */
             /* XXX assert("no such branch"); */
             Perl_sharedsv_associate(aTHX_ sv, *svp);
             sv_setsv(sv, *svp);
@@ -817,7 +834,7 @@ sharedsv_elem_mg_FETCH(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-/* set magic for PERL_MAGIC_tiedelem(p) */
+/* Set magic for PERL_MAGIC_tiedelem(p) */
 
 int
 sharedsv_elem_mg_STORE(pTHX_ SV *sv, MAGIC *mg)
@@ -852,7 +869,7 @@ sharedsv_elem_mg_STORE(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-/* clear magic for PERL_MAGIC_tiedelem(p) */
+/* Clear magic for PERL_MAGIC_tiedelem(p) */
 
 int
 sharedsv_elem_mg_DELETE(pTHX_ SV *sv, MAGIC *mg)
@@ -905,7 +922,7 @@ MGVTBL sharedsv_elem_vtbl = {
 
 /* ------------ PERL_MAGIC_tied(P) functions -------------- */
 
-/* len magic for PERL_MAGIC_tied(P) */
+/* Len magic for PERL_MAGIC_tied(P) */
 
 U32
 sharedsv_array_mg_FETCHSIZE(pTHX_ SV *sv, MAGIC *mg)
@@ -918,14 +935,14 @@ sharedsv_array_mg_FETCHSIZE(pTHX_ SV *sv, MAGIC *mg)
         val = av_len((AV*) ssv);
     }
     else {
-        /* not actually defined by tie API but ... */
+        /* Not actually defined by tie API but ... */
         val = HvKEYS((HV*) ssv);
     }
     SHARED_RELEASE;
     return val;
 }
 
-/* clear magic for PERL_MAGIC_tied(P) */
+/* Clear magic for PERL_MAGIC_tied(P) */
 
 int
 sharedsv_array_mg_CLEAR(pTHX_ SV *sv, MAGIC *mg)
@@ -943,7 +960,7 @@ sharedsv_array_mg_CLEAR(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-/* free magic for PERL_MAGIC_tied(P) */
+/* Free magic for PERL_MAGIC_tied(P) */
 
 int
 sharedsv_array_mg_free(pTHX_ SV *sv, MAGIC *mg)
@@ -953,7 +970,7 @@ sharedsv_array_mg_free(pTHX_ SV *sv, MAGIC *mg)
 }
 
 /*
- * copy magic for PERL_MAGIC_tied(P)
+ * Copy magic for PERL_MAGIC_tied(P)
  * This is called when perl is about to access an element of
  * the array -
  */
@@ -1019,7 +1036,7 @@ Perl_sharedsv_lock(pTHX_ SV *ssv)
     recursive_lock_acquire(aTHX_ &ul->lock, __FILE__, __LINE__);
 }
 
-/* handles calls from lock() builtin via PL_lockhook */
+/* Handles calls from lock() builtin via PL_lockhook */
 
 void
 Perl_sharedsv_locksv(pTHX_ SV *sv)
@@ -1329,8 +1346,8 @@ cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
         locks = ul->lock.locks;
         ul->lock.locks = 0;
 
-        /* since we are releasing the lock here we need to tell other
-        people that is ok to go ahead and use it */
+        /* Since we are releasing the lock here we need to tell other
+         * people that is ok to go ahead and use it */
         COND_SIGNAL(&ul->lock.cond);
         COND_WAIT(user_condition, &ul->lock.mutex);
         while(ul->lock.owner != NULL) {
@@ -1382,8 +1399,8 @@ cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
         ul->lock.owner = NULL;
         locks = ul->lock.locks;
         ul->lock.locks = 0;
-        /* since we are releasing the lock here we need to tell other
-        people that is ok to go ahead and use it */
+        /* Since we are releasing the lock here we need to tell other
+         * people that is ok to go ahead and use it */
         COND_SIGNAL(&ul->lock.cond);
         RETVAL = Perl_sharedsv_cond_timedwait(user_condition, &ul->lock.mutex, abs);
         while (ul->lock.owner != NULL) {

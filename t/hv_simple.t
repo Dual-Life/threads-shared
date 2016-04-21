@@ -29,7 +29,7 @@ sub skip {
 
 
 use ExtUtils::testlib;
-BEGIN { print "1..15\n" };
+BEGIN { print "1..16\n" };
 
 use threads;
 use threads::shared;
@@ -69,5 +69,7 @@ ok(14, exists $hash{1}, "Check numeric key");
 
 threads->create(sub { %hash = () })->join();
 ok(15, keys %hash == 0, "Check clear");
+
+ok(16, is_shared(%hash), "Check for sharing");
 
 # EOF
