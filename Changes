@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.18 Tue Feb 26 16:21:55 2008
+	- Stress test diagnostics
+	- 'die' properly if no compiler
+
 1.17 Fri Feb 22 21:28:52 2008
 	- Allow installation on non-threaded Perls
 
