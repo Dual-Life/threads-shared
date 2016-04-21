@@ -79,7 +79,7 @@ sub diag {
 
 sub skip_all {
     if (@_) {
-	_print "1..0 # Skipped: @_\n";
+        _print "1..0 # Skip @_\n";
     } else {
 	_print "1..0\n";
     }
@@ -316,7 +316,7 @@ sub skip {
     my $why = shift;
     my $n    = @_ ? shift : 1;
     for (1..$n) {
-        _print "ok $test # skip: $why\n";
+        _print "ok $test # skip $why\n";
         $test = $test + 1;
     }
     local $^W = 0;
@@ -328,7 +328,7 @@ sub todo_skip {
     my $n   = @_ ? shift : 1;
 
     for (1..$n) {
-        _print "not ok $test # TODO & SKIP: $why\n";
+        _print "not ok $test # TODO & SKIP $why\n";
         $test = $test + 1;
     }
     local $^W = 0;
@@ -527,12 +527,11 @@ sub runperl {
 	# run a fresh perl, so we'll brute force launder everything for you
 	my $sep;
 
-	eval "require Config; Config->import";
-	if ($@) {
+	if (! eval 'require Config; 1') {
 	    warn "test.pl had problems loading Config: $@";
 	    $sep = ':';
 	} else {
-	    $sep = $Config{path_sep};
+	    $sep = $Config::Config{path_sep};
 	}
 
 	my @keys = grep {exists $ENV{$_}} qw(CDPATH IFS ENV BASH_ENV);
@@ -573,12 +572,11 @@ sub which_perl {
 	return $Perl if $^O eq 'VMS';
 
 	my $exe;
-	eval "require Config; Config->import";
-	if ($@) {
+	if (! eval 'require Config; 1') {
 	    warn "test.pl had problems loading Config: $@";
 	    $exe = '';
 	} else {
-	    $exe = $Config{_exe};
+	    $exe = $Config::Config{_exe};
 	}
        $exe = '' unless defined $exe;
 
@@ -588,8 +586,7 @@ sub which_perl {
 
 	if ($Perl =~ /^perl\Q$exe\E$/i) {
 	    my $perl = "perl$exe";
-	    eval "require File::Spec";
-	    if ($@) {
+	    if (! eval 'require File::Spec; 1') {
 		warn "test.pl had problems loading File::Spec: $@";
 		$Perl = "./$perl";
 	    } else {
@@ -619,10 +616,37 @@ sub unlink_all {
     }
 }
 
+my %tmpfiles;
+END { unlink_all keys %tmpfiles }
 
-my $tmpfile = "misctmp000";
-1 while -f ++$tmpfile;
-END { unlink_all $tmpfile }
+# A regexp that matches the tempfile names
+$::tempfile_regexp = 'tmp\d+[A-Z][A-Z]?';
+
+# Avoid ++, avoid ranges, avoid split //
+my @letters = qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+sub tempfile {
+    my $count = 0;
+    do {
+	my $temp = $count;
+	my $try = "tmp$$";
+	do {
+	    $try .= $letters[$temp % 26];
+	    $temp = int ($temp / 26);
+	} while $temp;
+	# Need to note all the file names we allocated, as a second request may
+	# come before the first is created.
+	if (!-e $try && !$tmpfiles{$try}) {
+	    # We have a winner
+	    $tmpfiles{$try}++;
+	    return $try;
+	}
+	$count = $count + 1;
+    } while $count < 26 * 26;
+    die "Can't find temporary file name starting 'tmp$$'";
+}
+
+# This is the temporary file for _fresh_perl
+my $tmpfile = tempfile();
 
 #
 # _fresh_perl
@@ -658,8 +682,8 @@ sub _fresh_perl {
 
     # Clean up the results into something a bit more predictable.
     $results =~ s/\n+$//;
-    $results =~ s/at\s+misctmp\d+\s+line/at - line/g;
-    $results =~ s/of\s+misctmp\d+\s+aborted/of - aborted/g;
+    $results =~ s/at\s+$::tempfile_regexp\s+line/at - line/g;
+    $results =~ s/of\s+$::tempfile_regexp\s+aborted/of - aborted/g;
 
     # bison says 'parse error' instead of 'syntax error',
     # various yaccs may or may not capitalize 'syntax'.
@@ -816,9 +840,11 @@ sub watchdog ($)
                 local $SIG{'__WARN__'} = sub {
                     _diag("Watchdog warning: $_[0]");
                 };
+                my $sig = $^O eq 'VMS' ? 'TERM' : 'KILL';
                 $watchdog = system(1, which_perl(), '-e',
                                                     "sleep($timeout);" .
-                                                    "kill('KILL', $pid_to_kill);");
+                                                    "warn('# $timeout_msg\n');" .
+                                                    "kill($sig, $pid_to_kill);");
             };
             if ($@ || ($watchdog <= 0)) {
                 _diag('Failed to start watchdog');
@@ -874,19 +900,23 @@ sub watchdog ($)
 
     # Use a watchdog thread because either 'threads' is loaded,
     #   or fork() failed
-    if (eval { require threads; }) {
+    if (eval 'require threads; 1') {
         threads->create(sub {
                 # Load POSIX if available
                 eval { require POSIX; };
 
                 # Execute the timeout
-                sleep($timeout);
+                my $time_left = $timeout;
+                do {
+                    $time_left -= sleep($time_left);
+                } while ($time_left > 0);
 
                 # Kill the parent (and ourself)
                 select(STDERR); $| = 1;
                 _diag($timeout_msg);
                 POSIX::_exit(1) if (defined(&POSIX::_exit));
-                kill('KILL', $pid_to_kill);
+                my $sig = $^O eq 'VMS' ? 'TERM' : 'KILL';
+                kill($sig, $pid_to_kill);
             })->detach();
         return;
     }
@@ -901,7 +931,8 @@ sub watchdog ($)
             select(STDERR); $| = 1;
             _diag($timeout_msg);
             POSIX::_exit(1) if (defined(&POSIX::_exit));
-            kill('KILL', $pid_to_kill);
+            my $sig = $^O eq 'VMS' ? 'TERM' : 'KILL';
+            kill($sig, $pid_to_kill);
         };
     }
 }
