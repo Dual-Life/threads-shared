@@ -13,7 +13,7 @@ SKIP: {
         skip('Test::Pod 1.26 required for testing POD', 1);
     }
 
-    pod_file_ok('shared.pm');
+    pod_file_ok('lib/threads/shared.pm');
 }
 
 SKIP: {
@@ -41,7 +41,7 @@ SKIP: {
     }
     set_spell_cmd('aspell list --lang=en');
     add_stopwords(<DATA>);
-    pod_file_spelling_ok('shared.pm', 'shared.pm spelling');
+    pod_file_spelling_ok('lib/threads/shared.pm', 'shared.pm spelling');
     unlink("/home/$ENV{'USER'}/en.prepl", "/home/$ENV{'USER'}/en.pws");
 }
 
@@ -55,5 +55,7 @@ cpan
 CONDVAR
 LOCKVAR
 refcnt
+variable's
+destructor
 
 __END__

@@ -1,4 +1,4 @@
-threads::shared version 1.33
+threads::shared version 1.36
 ============================
 
 This module needs Perl 5.8.0 or later compiled with USEITHREADS.

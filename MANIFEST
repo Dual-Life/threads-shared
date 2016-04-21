@@ -2,7 +2,7 @@ MANIFEST
 Changes
 Makefile.PL
 README
-shared.pm
+lib/threads/shared.pm
 shared.xs
 shared.h
 ppport.h
