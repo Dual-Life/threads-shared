@@ -1,5 +1,10 @@
 Revision history for Perl extension threads::shared.
 
+1.15 Tue Nov  6 17:20:10 2007
+	- For Perl 5.10.0 and later, fixed problem with storing shared
+	    objects in shared structures
+	- Upgraded ppport.h to Devel::PPPort 3.13
+
 1.14 Thu Sep 20 14:29:36 2007
 	- Upgraded ppport.h to Devel::PPPort 3.11_06
 	- Fixed ppport.h warnings
