@@ -176,6 +176,13 @@ sub find_git_or_skip {
 	    }
 	    $source_dir = $where;
 	}
+    } elsif (exists $ENV{GIT_DIR}) {
+	my $commit = '8d063cd8450e59ea1c611a2f4f5a21059a2804f1';
+	my $out = `git rev-parse --verify --quiet '$commit^{commit}'`;
+	chomp $out;
+	if($out eq $commit) {
+	    $source_dir = '.'
+	}
     }
     if ($source_dir) {
 	my $version_string = `git --version`;
@@ -726,7 +733,7 @@ sub runperl {
     } else {
 	$result = `$runperl`;
     }
-    $result =~ s/\n\n/\n/ if $is_vms; # XXX pipes sometimes double these
+    $result =~ s/\n\n/\n/g if $is_vms; # XXX pipes sometimes double these
     return $result;
 }
 
@@ -961,7 +968,8 @@ sub fresh_perl_like {
 
 # Many tests use the same format in __DATA__ or external files to specify a
 # sequence of (fresh) tests to run, extra files they may temporarily need, and
-# what the expected output is. So have excatly one copy of the code to run that
+# what the expected output is.  Putting it here allows common code to serve
+# these multiple tests.
 #
 # Each program is source code to run followed by an "EXPECT" line, followed
 # by the expected output.

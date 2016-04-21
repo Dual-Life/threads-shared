@@ -7,7 +7,7 @@ use warnings;
 
 use Scalar::Util qw(reftype refaddr blessed);
 
-our $VERSION = '1.45'; # Please update the pod, too.
+our $VERSION = '1.46'; # Please update the pod, too.
 my $XS_VERSION = $VERSION;
 $VERSION = eval $VERSION;
 
@@ -195,7 +195,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 1.45
+This document describes threads::shared version 1.46
 
 =head1 SYNOPSIS
 
@@ -336,7 +336,7 @@ then the C<undef> substitution will be performed silently.
 
 C<is_shared> checks if the specified variable is shared or not.  If shared,
 returns the variable's internal ID (similar to
-L<refaddr()|Scalar::Util/"refaddr EXPR">).  Otherwise, returns C<undef>.
+C<refaddr()> (see L<Scalar::Util>).  Otherwise, returns C<undef>.
 
   if (is_shared($var)) {
       print("\$var is shared\n");
@@ -584,7 +584,7 @@ the error "lock can only be used on shared values" to occur when you attempt
 to C<< lock($hashref->{key}) >> or C<< lock($arrayref->[idx]) >> in another
 thread.
 
-Using L<refaddr()|Scalar::Util/"refaddr EXPR">) is unreliable for testing
+Using C<refaddr()> is unreliable for testing
 whether or not two shared references are equivalent (e.g., when testing for
 circular references).  Use L<is_shared()|/"is_shared VARIABLE">, instead:
 
@@ -623,8 +623,8 @@ Either of the following will work instead:
         ...
     }
 
-This module supports dual-valued variables created using L<dualvar() from
-Scalar::Util|Scalar::Util/"dualvar NUM, STRING">).  However, while C<$!> acts
+This module supports dual-valued variables created using C<dualvar()> from
+L<Scalar::Util>.  However, while C<$!> acts
 like a dualvar, it is implemented as a tied SV.  To propagate its value, use
 the follow construct, if needed:
 
