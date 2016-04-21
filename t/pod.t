@@ -62,5 +62,7 @@ destructors
 Destructors
 
 perlfunc
+dualvar
+SV
 
 __END__

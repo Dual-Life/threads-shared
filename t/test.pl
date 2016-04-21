@@ -762,6 +762,44 @@ sub unlink_all {
     $count;
 }
 
+# _num_to_alpha - Returns a string of letters representing a positive integer.
+# Arguments :
+#   number to convert
+#   maximum number of letters
+
+# returns undef if the number is negative
+# returns undef if the number of letters is greater than the maximum wanted
+
+# _num_to_alpha( 0) eq 'A';
+# _num_to_alpha( 1) eq 'B';
+# _num_to_alpha(25) eq 'Z';
+# _num_to_alpha(26) eq 'AA';
+# _num_to_alpha(27) eq 'AB';
+
+my @letters = qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+
+# Avoid ++ -- ranges split negative numbers
+sub _num_to_alpha{
+    my($num,$max_char) = @_;
+    return unless $num >= 0;
+    my $alpha = '';
+    my $char_count = 0;
+    $max_char = 0 if $max_char < 0;
+
+    while( 1 ){
+        $alpha = $letters[ $num % 26 ] . $alpha;
+        $num = int( $num / 26 );
+        last if $num == 0;
+        $num = $num - 1;
+
+        # char limit
+        next unless $max_char;
+        $char_count = $char_count + 1;
+        return if $char_count == $max_char;
+    }
+    return $alpha;
+}
+
 my %tmpfiles;
 END { unlink_all keys %tmpfiles }
 
@@ -769,25 +807,23 @@ END { unlink_all keys %tmpfiles }
 $::tempfile_regexp = 'tmp\d+[A-Z][A-Z]?';
 
 # Avoid ++, avoid ranges, avoid split //
-my @letters = qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+my $tempfile_count = 0;
 sub tempfile {
-    my $count = 0;
-    do {
-	my $temp = $count;
+    while(1){
 	my $try = "tmp$$";
-	do {
-	    $try = $try . $letters[$temp % 26];
-	    $temp = int ($temp / 26);
-	} while $temp;
+        my $alpha = _num_to_alpha($tempfile_count,2);
+        last unless defined $alpha;
+        $try = $try . $alpha;
+        $tempfile_count = $tempfile_count + 1;
+
 	# Need to note all the file names we allocated, as a second request may
 	# come before the first is created.
-	if (!-e $try && !$tmpfiles{$try}) {
+	if (!$tmpfiles{$try} && !-e $try) {
 	    # We have a winner
 	    $tmpfiles{$try} = 1;
 	    return $try;
 	}
-	$count = $count + 1;
-    } while $count < 26 * 26;
+    }
     die "Can't find temporary file name starting 'tmp$$'";
 }
 

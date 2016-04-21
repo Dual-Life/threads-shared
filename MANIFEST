@@ -14,6 +14,7 @@ t/blessed.t
 t/clone.t
 t/cond.t
 t/disabled.t
+t/dualvar.t
 t/hv_refs.t
 t/hv_simple.t
 t/no_share.t

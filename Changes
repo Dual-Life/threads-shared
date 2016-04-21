@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.42 Tue Oct  2 21:23:46 EDT 2012
+	- Support for dualvars (thanks to Philippe Causse)
+
 1.41 Wed Sep  5 17:16:10 2012
 	- Added feature to ignore cloning of unsupported types
 
