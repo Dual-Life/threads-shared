@@ -23,7 +23,9 @@ t/shared_attr.t
 t/stress.t
 t/sv_refs.t
 t/sv_simple.t
+t/utf8.t
 t/wait.t
 t/waithires.t
+t/test.pl
 examples/class.pl
 META.yml                                 Module meta-data (added by MakeMaker)

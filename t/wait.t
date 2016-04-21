@@ -1,41 +1,25 @@
 use strict;
 use warnings;
 
-use Config;
 BEGIN {
     if ($ENV{'PERL_CORE'}){
         chdir 't';
         unshift @INC, '../lib';
     }
+
+    # Import test.pl into its own package
+    {
+        package Test;
+        require($ENV{PERL_CORE} ? './test.pl' : './t/test.pl');
+    }
+
+    use Config;
     if (! $Config{'useithreads'}) {
-        print("1..0 # SKIP Perl not compiled with 'useithreads'\n");
-        exit(0);
+        Test::skip_all(q/Perl not compiled with 'useithreads'/);
     }
 }
 
 use ExtUtils::testlib;
-
-### Self-destruct timer child process
-my $TIMEOUT = 600;
-my $timer_pid;
-
-if ($Config{'d_fork'}) {
-    $timer_pid = fork();
-    if (defined($timer_pid) && ($timer_pid == 0)) {
-        # Child process
-        my $ppid = getppid();
-
-        # Sleep for timeout period
-        sleep($TIMEOUT - 2);   # Workaround for perlbug #49073
-        sleep(2);              # Wait for parent to exit
-
-        # Kill parent if it still exists
-        kill('KILL', $ppid) if (kill(0, $ppid));
-        exit(0);
-    }
-    # Parent will kill this process if tests finish on time
-}
-
 
 sub ok {
     my ($id, $ok, $name) = @_;
@@ -59,9 +43,10 @@ BEGIN {
 use threads;
 use threads::shared;
 
+Test::watchdog(300);   # In case we get stuck
+
 my $TEST = 1;
 ok($TEST++, 1, 'Loaded');
-
 
 ### Start of Testing ###
 
@@ -354,11 +339,6 @@ SYNCH_REFS: {
     }
 
 } # -- SYNCH_REFS block
-
-# Kill timer process
-if ($timer_pid && kill(0, $timer_pid)) {
-    kill('KILL', $timer_pid);
-}
 
 # Done
 exit(0);

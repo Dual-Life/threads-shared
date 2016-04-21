@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.24 Mon Jul  7 17:34:37 2008
+	- Support utf8 hash keys (bug #37149)
+	- Use standardized watchdog/timeout code in tests
+
 1.23 Tue Jun 17 20:26:13 2008
 	- Rewrite of timer process in tests
 
