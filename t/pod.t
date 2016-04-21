@@ -57,5 +57,7 @@ LOCKVAR
 refcnt
 variable's
 destructor
+destructors
+Destructors
 
 __END__
