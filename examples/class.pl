@@ -7,7 +7,7 @@ use threads;
 use threads::shared;
 
 package My::Class; {
-    use threads::shared qw(share is_shared);
+    use threads::shared qw(share is_shared shared_clone);
     use Scalar::Util qw(reftype blessed);
 
     # Constructor
@@ -22,7 +22,7 @@ package My::Class; {
                 require Carp;
                 Carp::croak("Missing value for '$tag'");
             }
-            $self{$tag} = _make_shared(shift);
+            $self{$tag} = shared_clone(shift);
         }
 
         return (bless(\%self, $class));
@@ -33,65 +33,7 @@ package My::Class; {
     {
         my ($self, $tag, $value) = @_;
         lock($self);
-        $self->{$tag} = _make_shared($value);
-    }
-
-    # Make a thread-shared version of a complex data structure or object
-    sub _make_shared
-    {
-        my $in = shift;
-
-        # If already thread-shared, then just return the input
-        return ($in) if (is_shared($in));
-
-        # Make copies of array, hash and scalar refs
-        my $out;
-        if (my $ref_type = reftype($in)) {
-            # Copy an array ref
-            if ($ref_type eq 'ARRAY') {
-                # Make empty shared array ref
-                $out = &share([]);
-                # Recursively copy and add contents
-                foreach my $val (@$in) {
-                    push(@$out, _make_shared($val));
-                }
-            }
-
-            # Copy a hash ref
-            elsif ($ref_type eq 'HASH') {
-                # Make empty shared hash ref
-                $out = &share({});
-                # Recursively copy and add contents
-                foreach my $key (keys(%{$in})) {
-                    $out->{$key} = _make_shared($in->{$key});
-                }
-            }
-
-            # Copy a scalar ref
-            elsif ($ref_type eq 'SCALAR') {
-                $out = \do{ my $scalar = $$in; };
-                share($out);
-            }
-        }
-
-        # If copy created above ...
-        if ($out) {
-            # Clone READONLY flag
-            if (Internals::SvREADONLY($in)) {
-                Internals::SvREADONLY($out, 1);
-            }
-            # Make blessed copy, if applicable
-            if (my $class = blessed($in)) {
-                bless($out, $class);
-            }
-            # Return copy
-            return ($out);
-        }
-
-        # Just return anything else
-        # NOTE: This will generate an error if we're thread-sharing,
-        #       and $in is not an ordinary scalar.
-        return ($in);
+        $self->{$tag} = shared_clone($value);
     }
 }
 
@@ -161,7 +103,7 @@ Jerry D. Hedden, S<E<lt>jdhedden AT cpan DOT orgE<gt>>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 - 2007 Jerry D. Hedden. All rights reserved.
+Copyright 2006 - 2009 Jerry D. Hedden. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

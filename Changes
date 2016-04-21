@@ -1,5 +1,25 @@
 Revision history for Perl extension threads::shared.
 
+1.33 Tue Mar  9 14:03:47 EST 2010
+	- Handle shared object reference during global destruction
+	- Document that changing array length via $#array doesn't work
+
+1.32 Fri Oct 16 16:31:18 2009
+	- Merge changes from blead (commit 8a8fad9addd88c65ee8b18b0e45b2ed9a18987f8)
+
+1.31 Mon Aug 10 19:14:35 2009
+	- Handle thread creation failures in tests due to lack of memory, etc.
+
+1.29 Mon Jun 22 08:35:00 2009
+	- Small doc fix
+	- Test file changes for core
+	- Upgraded ppport.h to Devel::PPPort 3.19
+
+1.28 Mon Feb 23 18:46:19 2009
+	- Correct POD wrt lock()
+	- Clarify is_shared($hash{'elem'}) in POD
+	- Upgraded ppport.h to Devel::PPPort 3.16
+
 1.27 Tue Nov 25 16:47:48 2008
 	- Require a minimum version of 'threads'
 	- Documented each(%{$foo{'bar'}}) bug
