@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.05 Wed Oct 25 14:27:36 EDT 2006
+	- Makefile.PL changes for CORE
+	- g++ build fixes
+
 1.04 Thu Oct 12 10:50:46 EDT 2006
 	- Added example script
 	- Added POD tests
