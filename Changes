@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.06 Wed Dec 20 14:01:57 EST 2006
+	- Fixed a bug in unlocking code
+	- Added stress test for cond_* functions
+
 1.05 Wed Oct 25 14:27:36 EDT 2006
 	- Makefile.PL changes for CORE
 	- g++ build fixes
