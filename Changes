@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.12 Wed May 23 09:21:35 EDT 2007
+	- Fixed 'Confused test output' problems with tests
+	- Skip stress test under HP-UX 10.20
+
 1.11 Mon May 14 12:13:37 2007
 	- Modify stress test to be TODO under MSWin32
 	- Store user locks safely
