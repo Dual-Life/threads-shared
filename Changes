@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.07 Wed Feb  7 10:44:22 EST 2007
+	- POD tweaks per Wolfgang Laun
+
 1.06 Wed Dec 20 14:01:57 EST 2006
 	- Fixed a bug in unlocking code
 	- Added stress test for cond_* functions
