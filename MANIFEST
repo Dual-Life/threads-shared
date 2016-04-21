@@ -11,6 +11,7 @@ t/0nothread.t
 t/av_refs.t
 t/av_simple.t
 t/blessed.t
+t/clone.t
 t/cond.t
 t/disabled.t
 t/hv_refs.t

@@ -1,5 +1,10 @@
 Revision history for Perl extension threads::shared.
 
+1.21 Wed May 14 15:15:44 2008
+	- Added shared_clone()
+	- Fixed is_shared($x->{elem}) and the like
+	- Upgraded ppport.h to Devel::PPPort 3.13_03
+
 1.19 Wed May  7 17:56:26 2008
 	- Fixed return value of ref() on refs of refs
 	- Document using is_shared() vs. refaddr() on shared refs
