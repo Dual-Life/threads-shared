@@ -18,6 +18,7 @@ t/hv_refs.t
 t/hv_simple.t
 t/no_share.t
 t/object.t
+t/object2.t
 t/pod.t
 t/shared_attr.t
 t/stress.t
@@ -28,4 +29,5 @@ t/wait.t
 t/waithires.t
 t/test.pl
 examples/class.pl
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

@@ -1,5 +1,12 @@
 Revision history for Perl extension threads::shared.
 
+1.39 Sat Sep  3 15:09:23 2011
+	- Version bump for blead
+
+1.38 Sat Sep  3 02:23:11 2011
+	- Sync from blead
+	- Documented limitation regarding removing shared objects from shared structures
+
 1.37 Sun Apr 17 23:43:21 2011
 	- Sync from blead
 
