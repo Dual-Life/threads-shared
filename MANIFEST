@@ -1,0 +1,23 @@
+MANIFEST
+Changes
+Makefile.PL
+README
+shared.pm
+shared.xs
+shared.h
+ppport.h
+hints/linux.pl
+t/0nothread.t
+t/av_refs.t
+t/av_simple.t
+t/blessed.t
+t/cond.t
+t/disabled.t
+t/hv_refs.t
+t/hv_simple.t
+t/no_share.t
+t/shared_attr.t
+t/sv_refs.t
+t/sv_simple.t
+t/wait.t
+META.yml                                 Module meta-data (added by MakeMaker)

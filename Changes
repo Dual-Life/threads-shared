@@ -1,0 +1,6 @@
+Revision history for Perl extension threads::shared.
+
+0.94 Tue Jan 10 00:00:00 2006
+	- Initial release to CPAN
+	- 'bless' is now supported on shared refs
+
