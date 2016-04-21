@@ -1,17 +1,18 @@
 #
-# t/test.pl - most of Test::More functionality without the fuss, plus
-# has mappings native_to_latin1 and latin1_to_native so that fewer tests
-# on non ASCII-ish platforms need to be skipped
+# t/test.pl - most of Test::More functionality without the fuss
 
 
 # NOTE:
 #
-# Increment ($x++) has a certain amount of cleverness for things like
+# It's best to not features found only in more modern Perls here, as some cpan
+# distributions copy this file and operate on older Perls.  Similarly keep
+# things simple as this may be run under fairly broken circumstances.  For
+# example, increment ($x++) has a certain amount of cleverness for things like
 #
 #   $x = 'zz';
 #   $x++; # $x eq 'aaa';
 #
-# stands more chance of breaking than just a simple
+# This stands more chance of breaking than just a simple
 #
 #   $x = $x + 1
 #
@@ -53,6 +54,7 @@ sub plan {
 	}
     } else {
 	my %plan = @_;
+	$plan{skip_all} and skip_all($plan{skip_all});
 	$n = $plan{tests};
     }
     _print "1..$n\n" unless $noplan;
@@ -102,6 +104,12 @@ sub note {
 
 sub is_miniperl {
     return !defined &DynaLoader::boot_DynaLoader;
+}
+
+sub set_up_inc {
+    # Don’t clobber @INC under miniperl
+    @INC = () unless is_miniperl;
+    unshift @INC, @_;
 }
 
 sub _comment {
@@ -154,6 +162,13 @@ sub skip_all_without_config {
 	$key =~ s/^use//;
 	$key =~ s/^d_//;
 	skip_all("no $key");
+    }
+}
+
+sub skip_all_without_unicode_tables { # (but only under miniperl)
+    if (is_miniperl()) {
+        skip_all_if_miniperl("Unicode tables not built yet")
+            unless eval 'require "unicore/Heavy.pl"';
     }
 }
 
@@ -281,20 +296,26 @@ sub display {
     foreach my $x (@_) {
         if (defined $x and not ref $x) {
             my $y = '';
-            foreach my $c (unpack("U*", $x)) {
+            foreach my $c (unpack("W*", $x)) {
                 if ($c > 255) {
                     $y = $y . sprintf "\\x{%x}", $c;
                 } elsif ($backslash_escape{$c}) {
                     $y = $y . $backslash_escape{$c};
                 } else {
                     my $z = chr $c; # Maybe we can get away with a literal...
-                    if ($z =~ /[[:^print:]]/) {
 
-                        # Use octal for characters traditionally expressed as
-                        # such: the low controls, which on EBCDIC aren't
-                        # necessarily the same ones as on ASCII platforms, but
-                        # are small ordinals, nonetheless
-                        if ($c <= 037) {
+                    if ($z !~ /[^[:^print:][:^ascii:]]/) {
+                        # The pattern above is equivalent (by de Morgan's
+                        # laws) to:
+                        #     $z !~ /(?[ [:print:] & [:ascii:] ])/
+                        # or, $z is not an ascii printable character
+
+                        # Use octal for characters with small ordinals that
+                        # are traditionally expressed as octal: the controls
+                        # below space, which on EBCDIC are almost all the
+                        # controls, but on ASCII don't include DEL nor the C1
+                        # controls.
+                        if ($c < ord " ") {
                             $z = sprintf "\\%03o", $c;
                         } else {
                             $z = sprintf "\\x{%x}", $c;
@@ -420,6 +441,14 @@ sub unlike ($$@) { like_yn (1,@_) }; # 1 for un-
 
 sub like_yn ($$$@) {
     my ($flip, undef, $expected, $name, @mess) = @_;
+
+    # We just accept like(..., qr/.../), not like(..., '...'), and
+    # definitely not like(..., '/.../') like
+    # Test::Builder::maybe_regex() does.
+    unless (ref($expected) &&  ref($expected) =~ /Regexp/) {
+	die "PANIC: The value '$expected' isn't a regexp. The like() function needs a qr// pattern, not a string";
+    }
+
     my $pass;
     $pass = $_[1] =~ /$expected/ if !$flip;
     $pass = $_[1] !~ /$expected/ if $flip;
@@ -455,7 +484,21 @@ sub next_test {
 # be compatible with Test::More::skip().
 sub skip {
     my $why = shift;
-    my $n    = @_ ? shift : 1;
+    my $n   = @_ ? shift : 1;
+    my $bad_swap;
+    my $both_zero;
+    {
+      local $^W = 0;
+      $bad_swap = $why > 0 && $n == 0;
+      $both_zero = $why == 0 && $n == 0;
+    }
+    if ($bad_swap || $both_zero || @_) {
+      my $arg = "'$why', '$n'";
+      if (@_) {
+        $arg .= join(", ", '', map { qq['$_'] } @_);
+      }
+      die qq[$0: expected skip(why, count), got skip($arg)\n];
+    }
     for (1..$n) {
         _print "ok $test # skip $why\n";
         $test = $test + 1;
@@ -469,10 +512,11 @@ sub skip_if_miniperl {
 }
 
 sub skip_without_dynamic_extension {
-    my ($extension) = @_;
-    skip("no dynamic loading on miniperl, no $extension") if is_miniperl();
-    return if &_have_dynamic_extension;
-    skip("$extension was not built");
+    my $extension = shift;
+    skip("no dynamic loading on miniperl, no extension $extension", @_)
+	if is_miniperl();
+    return if &_have_dynamic_extension($extension);
+    skip("extension $extension was not built", @_);
 }
 
 sub todo_skip {
@@ -564,7 +608,8 @@ USE_OK
 #   progs    => [ multi-liner (avoid quotes) ]
 #   progfile => perl script
 #   stdin    => string to feed the stdin (or undef to redirect from /dev/null)
-#   stderr   => redirect stderr to stdout
+#   stderr   => If 'devnull' suppresses stderr, if other TRUE value redirect
+#               stderr to stdout
 #   args     => [ command-line arguments to the perl program ]
 #   verbose  => print the command line
 
@@ -607,7 +652,7 @@ sub _create_runperl { # Create the string to qx in runperl().
     if (defined $args{prog}) {
 	die "test.pl:runperl(): both 'prog' and 'progs' cannot be used " . _where()
 	    if defined $args{progs};
-        $args{progs} = [$args{prog}]
+        $args{progs} = [split /\n/, $args{prog}, -1]
     }
     if (defined $args{progs}) {
 	die "test.pl:runperl(): 'progs' must be an ARRAYREF " . _where()
@@ -680,7 +725,12 @@ sub _create_runperl { # Create the string to qx in runperl().
     if (defined $args{args}) {
 	$runperl = _quote_args($runperl, $args{args});
     }
-    $runperl = $runperl . ' 2>&1' if $args{stderr};
+    if (exists $args{stderr} && $args{stderr} eq 'devnull') {
+        $runperl = $runperl . ($is_mswin ? ' 2>nul' : ' 2>/dev/null');
+    }
+    elsif ($args{stderr}) {
+        $runperl = $runperl . ' 2>&1';
+    }
     if ($args{verbose}) {
 	my $runperldisplay = $runperl;
 	$runperldisplay =~ s/\n/\n\#/g;
@@ -689,6 +739,7 @@ sub _create_runperl { # Create the string to qx in runperl().
     return $runperl;
 }
 
+# sub run_perl {} is alias to below
 sub runperl {
     die "test.pl:runperl() does not take a hashref"
 	if ref $_[0] and ref $_[0] eq 'HASH';
@@ -867,6 +918,28 @@ sub tempfile {
 	}
     }
     die "Can't find temporary file name starting \"tmp$$\"";
+}
+
+# register_tempfile - Adds a list of files to be removed at the end of the current test file
+# Arguments :
+#   a list of files to be removed later
+
+# returns a count of how many file names were actually added
+
+# Reuses %tmpfiles so that tempfile() will also skip any files added here
+# even if the file doesn't exist yet.
+
+sub register_tempfile {
+    my $count = 0;
+    for( @_ ){
+	if( $tmpfiles{$_} ){
+	    _print_stderr "# Temporary file '$_' already added\n";
+	}else{
+	    $tmpfiles{$_} = 1;
+	    $count = $count + 1;
+	}
+    }
+    return $count;
 }
 
 # This is the temporary file for _fresh_perl
@@ -1378,7 +1451,7 @@ sub class_ok {
     # Written so as to count as one test
     local $Level = $Level + 1;
     if( ref $class ) {
-        ok( 0, "$class is a refrence, not a class name" );
+        ok( 0, "$class is a reference, not a class name" );
     }
     else {
         isa_ok($class, $isa, $class_name);
@@ -1516,10 +1589,27 @@ sub watchdog ($;$)
                     _diag("Watchdog warning: $_[0]");
                 };
                 my $sig = $is_vms ? 'TERM' : 'KILL';
-                my $cmd = _create_runperl( prog =>  "sleep($timeout);" .
-                                                    "warn qq/# $timeout_msg" . '\n/;' .
-                                                    "kill($sig, $pid_to_kill);");
-                $watchdog = system(1, $cmd);
+                my $prog = "sleep($timeout);" .
+                           "warn qq/# $timeout_msg" . '\n/;' .
+                           "kill(q/$sig/, $pid_to_kill);";
+
+                # On Windows use the indirect object plus LIST form to guarantee
+                # that perl is launched directly rather than via the shell (see
+                # perlfunc.pod), and ensure that the LIST has multiple elements
+                # since the indirect object plus COMMANDSTRING form seems to
+                # hang (see perl #121283). Don't do this on VMS, which doesn't
+                # support the LIST form at all.
+                if ($is_mswin) {
+                    my $runperl = which_perl();
+                    if ($runperl =~ m/\s/) {
+                        $runperl = qq{"$runperl"};
+                    }
+                    $watchdog = system({ $runperl } 1, $runperl, '-e', $prog);
+                }
+                else {
+                    my $cmd = _create_runperl(prog => $prog);
+                    $watchdog = system(1, $cmd);
+                }
             };
             if ($@ || ($watchdog <= 0)) {
                 _diag('Failed to start watchdog');
@@ -1530,8 +1620,8 @@ sub watchdog ($;$)
 
             # Add END block to parent to terminate and
             #   clean up watchdog process
-            eval "END { local \$! = 0; local \$? = 0;
-                        wait() if kill('KILL', $watchdog); };";
+            eval("END { local \$! = 0; local \$? = 0;
+                        wait() if kill('KILL', $watchdog); };");
             return;
         }
 
@@ -1616,59 +1706,6 @@ WATCHDOG_VIA_ALARM:
             kill($sig, $pid_to_kill);
         };
     }
-}
-
-# The following 2 functions allow tests to work on both EBCDIC and
-# ASCII-ish platforms.  They convert string scalars between the native
-# character set and the set of 256 characters which is usually called
-# Latin1.
-
-sub native_to_latin1($) {
-    my $string = shift;
-
-    return $string if ord('^') == 94;   # ASCII, Latin1
-    my $output = "";
-    for my $i (0 .. length($string) - 1) {
-        $output .= chr(ord_native_to_latin1(ord(substr($string, $i, 1))));
-    }
-    # Preserve utf8ness of input onto the output, even if it didn't need to be
-    # utf8
-    utf8::upgrade($output) if utf8::is_utf8($string);
-
-    return $output;
-}
-
-sub latin1_to_native($) {
-    my $string = shift;
-
-    return $string if ord('^') == 94;   # ASCII, Latin1
-    my $output = "";
-    for my $i (0 .. length($string) - 1) {
-        $output .= chr(ord_latin1_to_native(ord(substr($string, $i, 1))));
-    }
-    # Preserve utf8ness of input onto the output, even if it didn't need to be
-    # utf8
-    utf8::upgrade($output) if utf8::is_utf8($string);
-
-    return $output;
-}
-
-sub ord_latin1_to_native {
-    # given an input code point, return the platform's native
-    # equivalent value.  Anything above latin1 is itself.
-
-    my $ord = shift;
-    return $ord if ord('^') == 94;   # ASCII, Latin1
-    return utf8::unicode_to_native($ord);
-}
-
-sub ord_native_to_latin1 {
-    # given an input platform code point, return the latin1 equivalent value.
-    # Anything above latin1 is itself.
-
-    my $ord = shift;
-    return $ord if ord('^') == 94;   # ASCII, Latin1
-    return utf8::native_to_unicode($ord);
 }
 
 1;

@@ -67,6 +67,7 @@ WriteMakefile(
         'Scalar::Util'      => 0,
         'threads'           => 1.73,
 
+        'Test'              => 0,
         'Test::More'        => 0,
         'ExtUtils::testlib' => 0,
     },
