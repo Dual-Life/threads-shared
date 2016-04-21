@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.13 Wed Sep  5 13:40:50 2007
+	- POD spelling test (maintainer only)
+
 1.12 Wed May 23 09:21:35 EDT 2007
 	- Fixed 'Confused test output' problems with tests
 	- Skip stress test under HP-UX 10.20
