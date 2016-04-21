@@ -109,6 +109,16 @@ sub _comment {
            map { split /\n/ } @_;
 }
 
+sub _have_dynamic_extension {
+    my $extension = shift;
+    unless (eval {require Config; 1}) {
+	warn "test.pl had problems loading Config: $@";
+	return 1;
+    }
+    $extension =~ s!::!/!g;
+    return 1 if ($Config::Config{extensions} =~ /\b$extension\b/);
+}
+
 sub skip_all {
     if (@_) {
         _print "1..0 # Skip @_\n";
@@ -123,14 +133,9 @@ sub skip_all_if_miniperl {
 }
 
 sub skip_all_without_dynamic_extension {
-    my $extension = shift;
+    my ($extension) = @_;
     skip_all("no dynamic loading on miniperl, no $extension") if is_miniperl();
-    unless (eval {require Config; 1}) {
-	warn "test.pl had problems loading Config: $@";
-	return;
-    }
-    $extension =~ s!::!/!g;
-    return if ($Config::Config{extensions} =~ /\b$extension\b/);
+    return if &_have_dynamic_extension;
     skip_all("$extension was not built");
 }
 
@@ -153,9 +158,9 @@ sub skip_all_without_config {
 }
 
 sub find_git_or_skip {
-    my ($found_dir, $reason);
+    my ($source_dir, $reason);
     if (-d '.git') {
-	$found_dir = 1;
+	$source_dir = '.';
     } elsif (-l 'MANIFEST' && -l 'AUTHORS') {
 	my $where = readlink 'MANIFEST';
 	die "Can't readling MANIFEST: $!" unless defined $where;
@@ -163,16 +168,20 @@ sub find_git_or_skip {
 	    unless $where =~ s!/MANIFEST\z!!;
 	if (-d "$where/.git") {
 	    # Looks like we are in a symlink tree
-	    chdir $where or die "Can't chdir '$where': $!";
-	    note("Found source tree at $where");
-	    $found_dir = 1;
+	    if (exists $ENV{GIT_DIR}) {
+		diag("Found source tree at $where, but \$ENV{GIT_DIR} is $ENV{GIT_DIR}. Not changing it");
+	    } else {
+		note("Found source tree at $where, setting \$ENV{GIT_DIR}");
+		$ENV{GIT_DIR} = "$where/.git";
+	    }
+	    $source_dir = $where;
 	}
     }
-    if ($found_dir) {
+    if ($source_dir) {
 	my $version_string = `git --version`;
 	if (defined $version_string
 	      && $version_string =~ /\Agit version (\d+\.\d+\.\d+)(.*)/) {
-	    return if eval "v$1 ge v1.5.0";
+	    return $source_dir if eval "v$1 ge v1.5.0";
 	    # If you have earlier than 1.5.0 and it works, change this test
 	    $reason = "in git checkout, but git version '$1$2' too old";
 	} else {
@@ -183,6 +192,12 @@ sub find_git_or_skip {
     }
     skip_all($reason) if $_[0] && $_[0] eq 'all';
     skip($reason, @_);
+}
+
+sub BAIL_OUT {
+    my ($reason) = @_;
+    _print("Bail out!  $reason\n");
+    exit 255;
 }
 
 sub _ok {
@@ -210,7 +225,10 @@ sub _ok {
 	note @mess; # Ensure that the message is properly escaped.
     }
     else {
-	_diag "# Failed $where\n";
+	my $msg = "# Failed test $test - ";
+	$msg.= "$name " if $name;
+	$msg .= "$where\n";
+	_diag $msg;
 	_diag @mess;
     }
 
@@ -439,6 +457,13 @@ sub skip {
 
 sub skip_if_miniperl {
     skip(@_) if is_miniperl();
+}
+
+sub skip_without_dynamic_extension {
+    my ($extension) = @_;
+    skip("no dynamic loading on miniperl, no $extension") if is_miniperl();
+    return if &_have_dynamic_extension;
+    skip("$extension was not built");
 }
 
 sub todo_skip {
@@ -780,8 +805,8 @@ sub _fresh_perl {
     # it feels like the least-worse thing is to assume that auto-vivification
     # works. At least, this is only going to be a run-time failure, so won't
     # affect tests using this file but not this function.
-    $runperl_args->{progfile} = $tmpfile;
-    $runperl_args->{stderr} = 1;
+    $runperl_args->{progfile} ||= $tmpfile;
+    $runperl_args->{stderr}     = 1 unless exists $runperl_args->{stderr};
 
     open TEST, ">$tmpfile" or die "Cannot open $tmpfile: $!";
 
@@ -876,6 +901,34 @@ sub fresh_perl_like {
 # Many tests use the same format in __DATA__ or external files to specify a
 # sequence of (fresh) tests to run, extra files they may temporarily need, and
 # what the expected output is. So have excatly one copy of the code to run that
+#
+# Each program is source code to run followed by an "EXPECT" line, followed
+# by the expected output.
+#
+# The code to run may begin with a command line switch such as -w or -0777
+# (alphanumerics only), and may contain (note the '# ' on each):
+#   # TODO reason for todo
+#   # SKIP reason for skip
+#   # SKIP ?code to test if this should be skipped
+#   # NAME name of the test (as with ok($ok, $name))
+#
+# The expected output may contain:
+#   OPTION list of options
+#   OPTIONS list of options
+#   PREFIX
+#     indicates that the supplied output is only a prefix to the
+#     expected output
+#
+# The possible options for OPTION may be:
+#   regex - the expected output is a regular expression
+#   random - all lines match but in any order
+#   fatal - the code will fail fatally (croak, die)
+#
+# If the actual output contains a line "SKIPPED" the test will be
+# skipped.
+#
+# If the global variable $FATAL is true then OPTION fatal is the
+# default.
 
 sub run_multiple_progs {
     my $up = shift;
@@ -918,6 +971,10 @@ sub run_multiple_progs {
 		}
 		$reason{$what} = $temp;
 	    }
+	}
+	my $name = '';
+	if ($prog =~ s/^#\s*NAME\s+(.+)\n//m) {
+	    $name = $1;
 	}
 
 	if ($prog =~ /--FILE--/) {
@@ -979,6 +1036,7 @@ sub run_multiple_progs {
 	# any special options? (OPTIONS foo bar zap)
 	my $option_regex = 0;
 	my $option_random = 0;
+	my $fatal = $FATAL;
 	if ($expected =~ s/^OPTIONS? (.+)\n//) {
 	    foreach my $option (split(' ', $1)) {
 		if ($option eq 'regex') { # allow regular expressions
@@ -986,6 +1044,9 @@ sub run_multiple_progs {
 		}
 		elsif ($option eq 'random') { # all lines match, but in any order
 		    $option_random = 1;
+		}
+		elsif ($option eq 'fatal') { # perl should fail
+		    $fatal = 1;
 		}
 		else {
 		    die "$0: Unknown OPTION '$option'\n";
@@ -999,28 +1060,36 @@ sub run_multiple_progs {
 	    print "$results\n" ;
 	    $ok = 1;
 	}
-	elsif ($option_random) {
-	    my @got = sort split "\n", $results;
-	    my @expected = sort split "\n", $expected;
-
-	    $ok = "@got" eq "@expected";
-	}
-	elsif ($option_regex) {
-	    $ok = $results =~ /^$expected/;
-	}
-	elsif ($prefix) {
-	    $ok = $results =~ /^\Q$expected/;
-	}
 	else {
-	    $ok = $results eq $expected;
+	    if ($option_random) {
+	        my @got = sort split "\n", $results;
+	        my @expected = sort split "\n", $expected;
+
+	        $ok = "@got" eq "@expected";
+	    }
+	    elsif ($option_regex) {
+	        $ok = $results =~ /^$expected/;
+	    }
+	    elsif ($prefix) {
+	        $ok = $results =~ /^\Q$expected/;
+	    }
+	    else {
+	        $ok = $results eq $expected;
+	    }
+
+	    if ($ok && $fatal && !($status >> 8)) {
+		$ok = 0;
+	    }
 	}
 
 	local $::TODO = $reason{todo};
 
 	unless ($ok) {
 	    my $err_line = "PROG: $switch\n$prog\n" .
-			   "EXPECTED:\n$expected\n" .
-			   "GOT:\n$results\n";
+			   "EXPECTED:\n$expected\n";
+	    $err_line   .= "EXIT STATUS: != 0\n" if $fatal;
+	    $err_line   .= "GOT:\n$results\n";
+	    $err_line   .= "EXIT STATUS: " . ($status >> 8) . "\n" if $fatal;
 	    if ($::TODO) {
 		$err_line =~ s/^/# /mg;
 		print $err_line;  # Harness can't filter it out from STDERR.
@@ -1030,7 +1099,7 @@ sub run_multiple_progs {
 	    }
 	}
 
-	ok($ok);
+	ok($ok, $name);
 
 	foreach (@temps) {
 	    unlink $_ if $_;
@@ -1064,7 +1133,7 @@ sub can_ok ($@) {
 }
 
 
-# Call $class->new( @$args ); and run the result through isa_ok.
+# Call $class->new( @$args ); and run the result through object_ok.
 # See Test::More::new_ok
 sub new_ok {
     my($class, $args, $obj_name) = @_;
@@ -1078,7 +1147,7 @@ sub new_ok {
     my $error = $@;
 
     if($ok) {
-        isa_ok($obj, $class, $object_name);
+        object_ok($obj, $class, $object_name);
     }
     else {
         ok( 0, "new() died" );
@@ -1099,20 +1168,29 @@ sub isa_ok ($$;$) {
     if( !defined $object ) {
         $diag = "$obj_name isn't defined";
     }
-    elsif( !ref $object ) {
-        $diag = "$obj_name isn't a reference";
-    }
     else {
+        my $whatami = ref $object ? 'object' : 'class';
+
         # We can't use UNIVERSAL::isa because we want to honor isa() overrides
         local($@, $!);  # eval sometimes resets $!
         my $rslt = eval { $object->isa($class) };
-        if( $@ ) {
-            if( $@ =~ /^Can't call method "isa" on unblessed reference/ ) {
+        my $error = $@;  # in case something else blows away $@
+
+        if( $error ) {
+            if( $error =~ /^Can't call method "isa" on unblessed reference/ ) {
+                # It's an unblessed reference
+                $obj_name = 'The reference' unless defined $obj_name;
                 if( !UNIVERSAL::isa($object, $class) ) {
                     my $ref = ref $object;
                     $diag = "$obj_name isn't a '$class' it's a '$ref'";
                 }
-            } else {
+            }
+            elsif( $error =~ /Can't call method "isa" without a package/ ) {
+                # It's something that can't even be a class
+                $obj_name = 'The thing' unless defined $obj_name;
+                $diag = "$obj_name isn't a class or reference";
+            }
+            else {
                 die <<WHOA;
 WHOA! I tried to call ->isa on your object and got some weird error.
 This should never happen.  Please contact the author immediately.
@@ -1122,6 +1200,7 @@ WHOA
             }
         }
         elsif( !$rslt ) {
+            $obj_name = "The $whatami" unless defined $obj_name;
             my $ref = ref $object;
             $diag = "$obj_name isn't a '$class' it's a '$ref'";
         }
@@ -1129,6 +1208,34 @@ WHOA
 
     _ok( !$diag, _where(), $name );
 }
+
+
+sub class_ok {
+    my($class, $isa, $class_name) = @_;
+
+    # Written so as to count as one test
+    local $Level = $Level + 1;
+    if( ref $class ) {
+        ok( 0, "$class is a refrence, not a class name" );
+    }
+    else {
+        isa_ok($class, $isa, $class_name);
+    }
+}
+
+
+sub object_ok {
+    my($obj, $isa, $obj_name) = @_;
+
+    local $Level = $Level + 1;
+    if( !ref $obj ) {
+        ok( 0, "$obj is not a reference" );
+    }
+    else {
+        isa_ok($obj, $isa, $obj_name);
+    }
+}
+
 
 # Purposefully avoiding a closure.
 sub __capture {
@@ -1224,7 +1331,7 @@ sub watchdog ($;$)
 
     # Don't use a watchdog process if 'threads' is loaded -
     #   use a watchdog thread instead
-    if (!$threads_on) {
+    if (!$threads_on || $method eq "process") {
 
         # On Windows and VMS, try launching a watchdog process
         #   using system(1, ...) (see perlport.pod)
@@ -1291,6 +1398,11 @@ sub watchdog ($;$)
             if (kill(0, $pid_to_kill)) {
                 _diag($timeout_msg);
                 kill('KILL', $pid_to_kill);
+		if ($is_cygwin) {
+		    # sometimes the above isn't enough on cygwin
+		    sleep 1; # wait a little, it might have worked after all
+		    system("/bin/kill -f $pid_to_kill");
+		}
             }
 
             # Don't execute END block (added at beginning of this file)

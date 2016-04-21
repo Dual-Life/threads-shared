@@ -1,7 +1,10 @@
 Revision history for Perl extension threads::shared.
 
+1.41 Wed Sep  5 17:16:10 2012
+	- Added feature to ignore cloning of unsupported types
+
 1.40 Fri Sep  9 19:58:06 EDT 2011
-	- Destructors now called when shared objects from shared structures
+	- Destructors now called when shared objects removed from shared structures
 
 1.39 Sat Sep  3 15:09:23 2011
 	- Version bump for blead
@@ -110,7 +113,6 @@ Revision history for Perl extension threads::shared.
 1.09 Mon Apr  9 16:49:30 EDT 2007
 	- Modify stress test to not hang under MSWin32
 	- Fix casting issue under MSWin32
-	- Subversion repository on Google
 
 1.08 Fri Mar 16 08:31:50 EDT 2007
 	- Sub-second resolution for cont_timedwait under MSWin32

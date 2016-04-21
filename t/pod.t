@@ -49,6 +49,7 @@ exit(0);
 
 __DATA__
 
+Artur
 Hedden
 
 cpan
@@ -59,5 +60,7 @@ variable's
 destructor
 destructors
 Destructors
+
+perlfunc
 
 __END__
