@@ -1,5 +1,11 @@
 Revision history for Perl extension threads::shared.
 
+1.02 Fri Jul 14 08:56:03 EDT 2006
+	- Skip failing thread/wait tests on HP-UX 10.20 (patch 27920)
+	- Check for 'C' compiler when building module
+	- Remove BEGIN block in .pm file
+	- Upgraded ppport.h to Devel::PPPort 3.09
+
 1.01 Sat Mar 25 18:46:44 EST 2006
 	- Restoration of 'core' build parameters
 

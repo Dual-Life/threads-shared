@@ -132,6 +132,8 @@
 #include "perl.h"
 #include "XSUB.h"
 #ifdef HAS_PPPORT_H
+#define NEED_vnewSVpvf
+#define NEED_warner
 #  include "ppport.h"
 #  include "shared.h"
 #endif
@@ -615,6 +617,11 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
     switch (pthread_cond_timedwait(cond, mut, &ts)) {
         case 0:         got_it = 1; break;
         case ETIMEDOUT:             break;
+#ifdef OEMVS
+        case -1:
+            if (errno == ETIMEDOUT || errno == EAGAIN)
+                break;
+#endif
         default:
             Perl_croak_nocontext("panic: cond_timedwait");
             break;
@@ -787,7 +794,7 @@ sharedsv_scalar_mg_local(pTHX_ SV* nsv, MAGIC *mg)
         LEAVE_LOCK;
     }
     nmg = sv_magicext(nsv, mg->mg_obj, mg->mg_type, mg->mg_virtual,
-                            mg->mg_ptr, mg->mg_len);
+                           mg->mg_ptr, mg->mg_len);
     nmg->mg_flags   = mg->mg_flags;
     nmg->mg_private = mg->mg_private;
 

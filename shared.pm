@@ -5,18 +5,17 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
+my $XS_VERSION = $VERSION;
+$VERSION = eval $VERSION;
 
-BEGIN {
-    # Declare that we have been loaded
-    $threads::shared::threads_shared = 1;
-}
-
+# Declare that we have been loaded
+$threads::shared::threads_shared = 1;
 
 # Load the XS code, if applicable
 if ($threads::threads) {
     require XSLoader;
-    XSLoader::load('threads::shared', $VERSION);
+    XSLoader::load('threads::shared', $XS_VERSION);
 
     *is_shared = \&_id;
 
@@ -74,7 +73,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 1.01
+This document describes threads::shared version 1.02
 
 =head1 SYNOPSIS
 
@@ -368,7 +367,7 @@ L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
 Annotated POD for L<threads::shared>:
-L<http://annocpan.org/~JDHEDDEN/threads-shared-1.01/shared.pm>
+L<http://annocpan.org/~JDHEDDEN/threads-shared-1.02/shared.pm>
 
 L<threads>, L<perlthrtut>
 

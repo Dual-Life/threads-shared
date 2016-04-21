@@ -8,17 +8,61 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 
+# Used to check for a 'C' compiler
+sub check_cc
+{
+    require File::Spec;
+
+    my $cmd = $_[0];
+    if (-x $cmd or MM->maybe_command($cmd)) {
+        return (1);       # CC command found
+    }
+    for my $dir (File::Spec->path(), '.') {
+        my $abs = File::Spec->catfile($dir, $cmd);
+        if (-x $abs or MM->maybe_command($abs)) {
+            return (1);   # CC command found
+        }
+    }
+    return;
+}
+
+sub have_cc
+{
+    eval { require Config_m; };     # ExtUtils::FakeConfig (+ ActivePerl)
+    if ($@) {
+        eval { require Config; };   # Everyone else
+    }
+    my @chunks = split(/ /, $Config::Config{cc});
+    # $Config{cc} may contain args; try to find out the program part
+    while (@chunks) {
+        if (check_cc("@chunks")) {
+            return (1);   # CC command found
+        }
+        pop(@chunks);
+    }
+    return;
+}
+
+
 # Build options for different environments
 my @conditional_params;
 if (grep { $_ eq 'PERL_CORE=1' } @ARGV) {
     # Core
     push(@conditional_params, 'MAN3PODS' => {});
+
 } else {
     # CPAN
-    push(@conditional_params, 'DEFINE'   => '-DHAS_PPPORT_H');
+
+    # Verify that a 'C' compiler is available
+    if (! have_cc()) {
+        die("No 'C' compiler found to build 'threads'\n");
+    }
+
+    push(@conditional_params, 'DEFINE' => '-DHAS_PPPORT_H');
 }
 
 
+# Create Makefile
 WriteMakefile(
     'NAME'              => 'threads::shared',
     'AUTHOR'            => 'Artur Bergman <sky AT crucially DOT net>',
@@ -26,6 +70,10 @@ WriteMakefile(
     'ABSTRACT_FROM'     => 'shared.pm',
     'PM' => {
         'shared.pm'     => '$(INST_LIBDIR)/shared.pm',
+    },
+    'PREREQ_PM'         => {
+        'threads'  => 0,
+        'XSLoader' => 0,
     },
     'INSTALLDIRS'       => 'perl',
 
