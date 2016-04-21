@@ -439,7 +439,7 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
             mg = sv_magicext(sv, obj, PERL_MAGIC_tied, &sharedsv_array_vtbl,
                             (char *)ssv, 0);
             mg->mg_flags |= (MGf_COPY|MGf_DUP);
-            SvREFCNT_inc(ssv);
+            SvREFCNT_inc_void(ssv);
             SvREFCNT_dec(obj);
         }
         break;
@@ -460,7 +460,7 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
                                     |MGf_LOCAL
 #endif
                             );
-            SvREFCNT_inc(ssv);
+            SvREFCNT_inc_void(ssv);
         }
         break;
     }
@@ -716,6 +716,11 @@ sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
 
             SvRV_set(ssv, SvREFCNT_inc(sobj));
             SvROK_on(ssv);
+            if (SvOBJECT(sobj)) {
+                /* Remove any old blessing */
+                SvREFCNT_dec(SvSTASH(sobj));
+                SvOBJECT_off(sobj);
+            }
             if (SvOBJECT(obj)) {
               SV* fake_stash = newSVpv(HvNAME_get(SvSTASH(obj)),0);
               SvOBJECT_on(sobj);
@@ -729,6 +734,11 @@ sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
         SvTEMP_off(sv);
         SHARED_CONTEXT;
         sv_setsv_nomg(ssv, sv);
+        if (SvOBJECT(ssv)) {
+            /* Remove any old blessing */
+            SvREFCNT_dec(SvSTASH(ssv));
+            SvOBJECT_off(ssv);
+        }
         if (SvOBJECT(sv)) {
           SV* fake_stash = newSVpv(HvNAME_get(SvSTASH(sv)),0);
           SvOBJECT_on(ssv);
@@ -775,7 +785,7 @@ sharedsv_scalar_mg_free(pTHX_ SV *sv, MAGIC *mg)
 int
 sharedsv_scalar_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
-    SvREFCNT_inc(mg->mg_ptr);
+    SvREFCNT_inc_void(mg->mg_ptr);
     return (0);
 }
 
@@ -790,7 +800,7 @@ sharedsv_scalar_mg_local(pTHX_ SV* nsv, MAGIC *mg)
     SV *ssv = (SV *) mg->mg_ptr;
     if (ssv) {
         ENTER_LOCK;
-        SvREFCNT_inc(ssv);
+        SvREFCNT_inc_void(ssv);
         LEAVE_LOCK;
     }
     nmg = sv_magicext(nsv, mg->mg_obj, mg->mg_type, mg->mg_virtual,
@@ -929,7 +939,7 @@ sharedsv_elem_mg_DELETE(pTHX_ SV *sv, MAGIC *mg)
 int
 sharedsv_elem_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
-    SvREFCNT_inc(S_sharedsv_from_obj(aTHX_ mg->mg_obj));
+    SvREFCNT_inc_void(S_sharedsv_from_obj(aTHX_ mg->mg_obj));
     assert(mg->mg_flags & MGf_DUP);
     return (0);
 }
@@ -1015,7 +1025,7 @@ sharedsv_array_mg_copy(pTHX_ SV *sv, MAGIC* mg,
 int
 sharedsv_array_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
-    SvREFCNT_inc((SV*)mg->mg_ptr);
+    SvREFCNT_inc_void((SV*)mg->mg_ptr);
     assert(mg->mg_flags & MGf_DUP);
     return (0);
 }
@@ -1122,7 +1132,7 @@ PUSH(SV *obj, ...)
             sharedsv_scalar_store(aTHX_ tmp, stmp);
             SHARED_CONTEXT;
             av_push((AV*) sobj, stmp);
-            SvREFCNT_inc(stmp);
+            SvREFCNT_inc_void(stmp);
             SHARED_RELEASE;
             SvREFCNT_dec(tmp);
         }
@@ -1144,7 +1154,7 @@ UNSHIFT(SV *obj, ...)
             sharedsv_scalar_store(aTHX_ tmp, stmp);
             SHARED_CONTEXT;
             av_store((AV*) sobj, i - 1, stmp);
-            SvREFCNT_inc(stmp);
+            SvREFCNT_inc_void(stmp);
             CALLER_CONTEXT;
             SvREFCNT_dec(tmp);
         }
@@ -1504,7 +1514,7 @@ bless(SV* ref, ...);
             }
             stash = gv_stashpvn(ptr, len, TRUE);
         }
-        SvREFCNT_inc(ref);
+        SvREFCNT_inc_void(ref);
         (void)sv_bless(ref, stash);
         ST(0) = sv_2mortal(ref);
         ssv = Perl_sharedsv_find(aTHX_ ref);

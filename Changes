@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.03 Fri Sep 15 15:09:26 EDT 2006
+	- Fix memory leak caused blessed shared objects
+	- Upgraded ppport.h to Devel::PPPort 3.10
+
 1.02 Fri Jul 14 08:56:03 EDT 2006
 	- Skip failing thread/wait tests on HP-UX 10.20 (patch 27920)
 	- Check for 'C' compiler when building module
