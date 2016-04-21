@@ -21,5 +21,6 @@ t/shared_attr.t
 t/sv_refs.t
 t/sv_simple.t
 t/wait.t
+t/waithires.t
 examples/class.pl
 META.yml                                 Module meta-data (added by MakeMaker)
