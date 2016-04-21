@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.43 Fri Jan 11 15:49:59 2013
+	- Timeout fix for t/stress.t (Nicholas Clark)
+
 1.42 Tue Oct  2 21:23:46 EDT 2012
 	- Support for dualvars (thanks to Philippe Causse)
 

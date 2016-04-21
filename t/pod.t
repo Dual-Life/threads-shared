@@ -53,6 +53,7 @@ Artur
 Hedden
 
 cpan
+CPAN
 CONDVAR
 LOCKVAR
 refcnt
