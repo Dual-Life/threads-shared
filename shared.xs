@@ -131,8 +131,10 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
-#include "ppport.h"
-#include "shared.h"
+#ifdef HAS_PPPORT_H
+#  include "ppport.h"
+#  include "shared.h"
+#endif
 
 #ifdef USE_ITHREADS
 

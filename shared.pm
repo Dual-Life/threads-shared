@@ -5,7 +5,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.99';
+our $VERSION = '1.01';
 
 BEGIN {
     # Declare that we have been loaded
@@ -74,7 +74,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 0.99
+This document describes threads::shared version 1.01
 
 =head1 SYNOPSIS
 
@@ -368,7 +368,7 @@ L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
 Annotated POD for L<threads::shared>:
-L<http://annocpan.org/~JDHEDDEN/threads-shared-0.99/shared.pm>
+L<http://annocpan.org/~JDHEDDEN/threads-shared-1.01/shared.pm>
 
 L<threads>, L<perlthrtut>
 

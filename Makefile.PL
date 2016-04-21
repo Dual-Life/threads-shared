@@ -7,6 +7,18 @@ use warnings;
 
 use ExtUtils::MakeMaker;
 
+
+# Build options for different environments
+my @conditional_params;
+if (grep { $_ eq 'PERL_CORE=1' } @ARGV) {
+    # Core
+    push(@conditional_params, 'MAN3PODS' => {});
+} else {
+    # CPAN
+    push(@conditional_params, 'DEFINE'   => '-DHAS_PPPORT_H');
+}
+
+
 WriteMakefile(
     'NAME'              => 'threads::shared',
     'AUTHOR'            => 'Artur Bergman <sky AT crucially DOT net>',
@@ -16,25 +28,13 @@ WriteMakefile(
         'shared.pm'     => '$(INST_LIBDIR)/shared.pm',
     },
     'INSTALLDIRS'       => 'perl',
+
     ((ExtUtils::MakeMaker->VERSION() lt '6.25') ?
         ('PL_FILES' => { })            : ()),
     ((ExtUtils::MakeMaker->VERSION() gt '6.30') ?
         ('LICENSE'  => 'perl')         : ()),
+
+    @conditional_params
 );
-
-
-# Add additional target(s) to Makefile for use by module maintainer
-sub MY::postamble
-{
-    return <<'_EXTRAS_';
-ppport:
-	@( cd /tmp; perl -e 'use Devel::PPPort; Devel::PPPort::WriteFile("ppport.h");' )
-	@if ! cmp -s ppport.h /tmp/ppport.h; then \
-	    diff ppport.h /tmp/ppport.h ; \
-	    echo; \
-	    perl /tmp/ppport.h; \
-	fi
-_EXTRAS_
-}
 
 # EOF

@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.01 Sat Mar 25 18:46:44 EST 2006
+	- Restoration of 'core' build parameters
+
 0.99 Sun Mar 19 17:38:52 EST 2006
 	- Use $ENV{PERL_CORE} in tests
 	- More XS code cleanups
