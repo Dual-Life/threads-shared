@@ -16,8 +16,10 @@ t/disabled.t
 t/hv_refs.t
 t/hv_simple.t
 t/no_share.t
+t/pod.t
 t/shared_attr.t
 t/sv_refs.t
 t/sv_simple.t
 t/wait.t
+examples/class.pl
 META.yml                                 Module meta-data (added by MakeMaker)

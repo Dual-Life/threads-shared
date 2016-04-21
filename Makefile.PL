@@ -65,15 +65,23 @@ if (grep { $_ eq 'PERL_CORE=1' } @ARGV) {
 # Create Makefile
 WriteMakefile(
     'NAME'              => 'threads::shared',
-    'AUTHOR'            => 'Artur Bergman <sky AT crucially DOT net>',
+    'AUTHOR'            => 'Artur Bergman, Jerry D. Hedden <jdhedden AT cpan DOT org>',
     'VERSION_FROM'      => 'shared.pm',
     'ABSTRACT_FROM'     => 'shared.pm',
     'PM' => {
         'shared.pm'     => '$(INST_LIBDIR)/shared.pm',
     },
-    'PREREQ_PM'         => {
-        'threads'  => 0,
-        'XSLoader' => 0,
+    'PREREQ_PM' => {
+        'strict'                => 0,
+        'warnings'              => 0,
+        'threads'               => 0,
+        'Config'                => 0,
+        'Carp'                  => 0,
+        'XSLoader'              => 0,
+
+        'Test'                  => 0,
+        'Test::More'            => 0,
+        'ExtUtils::testlib'     => 0,
     },
     'INSTALLDIRS'       => 'perl',
 
