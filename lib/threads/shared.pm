@@ -7,7 +7,7 @@ use warnings;
 
 use Scalar::Util qw(reftype refaddr blessed);
 
-our $VERSION = '1.43';
+our $VERSION = '1.45'; # Please update the pod, too.
 my $XS_VERSION = $VERSION;
 $VERSION = eval $VERSION;
 
@@ -195,7 +195,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 1.43
+This document describes threads::shared version 1.45
 
 =head1 SYNOPSIS
 
@@ -406,7 +406,8 @@ the variable, and blocks until another thread does a C<cond_signal> or
 C<cond_broadcast> for that same locked variable.  The variable that
 C<cond_wait> blocked on is re-locked after the C<cond_wait> is satisfied.  If
 there are multiple threads C<cond_wait>ing on the same variable, all but one
-will re-block waiting to reacquire the lock on the variable. (So if you're only
+will re-block waiting to reacquire the
+lock on the variable.  (So if you're only
 using C<cond_wait> for synchronization, give up the lock as soon as possible).
 The two actions of unlocking the variable and entering the blocked wait state
 are atomic, the two actions of exiting from the blocked wait state and
@@ -454,16 +455,19 @@ be recalculated with each pass:
 =item cond_signal VARIABLE
 
 The C<cond_signal> function takes a B<locked> variable as a parameter and
-unblocks one thread that's C<cond_wait>ing on that variable. If more than one
+unblocks one thread that's C<cond_wait>ing
+on that variable.  If more than one
 thread is blocked in a C<cond_wait> on that variable, only one (and which one
 is indeterminate) will be unblocked.
 
 If there are no threads blocked in a C<cond_wait> on the variable, the signal
-is discarded. By always locking before signaling, you can (with care), avoid
+is discarded.  By always locking before
+signaling, you can (with care), avoid
 signaling before another thread has entered cond_wait().
 
 C<cond_signal> will normally generate a warning if you attempt to use it on an
-unlocked variable. On the rare occasions where doing this may be sensible, you
+unlocked variable.  On the rare occasions
+where doing this may be sensible, you
 can suppress the warning with:
 
   { no warnings 'threads'; cond_signal($foo); }
@@ -520,6 +524,18 @@ in both threaded and non-threaded applications.
 If you want access to threads, you must C<use threads> before you
 C<use threads::shared>.  L<threads> will emit a warning if you use it after
 L<threads::shared>.
+
+=head1 WARNINGS
+
+=over 4
+
+=item cond_broadcast() called on unlocked variable
+
+=item cond_signal() called on unlocked variable
+
+See L</"cond_signal VARIABLE">, above.
+
+=back
 
 =head1 BUGS AND LIMITATIONS
 
