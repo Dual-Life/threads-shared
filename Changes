@@ -1,5 +1,9 @@
 Revision history for Perl extension threads::shared.
 
+1.14 Thu Sep 20 14:29:36 2007
+	- Upgraded ppport.h to Devel::PPPort 3.11_06
+	- Fixed ppport.h warnings
+
 1.13 Wed Sep  5 13:40:50 2007
 	- POD spelling test (maintainer only)
 
