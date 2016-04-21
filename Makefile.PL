@@ -55,14 +55,13 @@ if (grep { $_ eq 'PERL_CORE=1' } @ARGV) {
 
     # Verify that a 'C' compiler is available
     if (! have_cc()) {
-        die("No 'C' compiler found to build 'threads'\n");
+        die("No 'C' compiler found to build 'threads::shared'\n");
     }
 
     push(@conditional_params, 'DEFINE' => '-DHAS_PPPORT_H',
                               'PREREQ_PM' => {
                                     'strict'            => 0,
                                     'warnings'          => 0,
-                                    'threads'           => 0,
                                     'Config'            => 0,
                                     'Carp'              => 0,
                                     'XSLoader'          => 0,

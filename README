@@ -1,4 +1,4 @@
-threads::shared version 1.16
+threads::shared version 1.17
 ============================
 
 This module needs Perl 5.8.0 or later compiled with USEITHREADS.
@@ -12,12 +12,6 @@ To install this module type the following:
     make
     make test
     make install
-
-DEPENDENCIES
-
-This module requires these other modules and libraries:
-
-    threads
 
 COPYRIGHT AND LICENCE
 

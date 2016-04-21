@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+1.17 Fri Feb 22 21:28:52 2008
+	- Allow installation on non-threaded Perls
+
 1.16 Wed Feb 20 17:15:44 2008
 	- Blead change 33256
 	- Upgraded ppport.h to Devel::PPPort 3.13_01
