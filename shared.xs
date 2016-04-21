@@ -203,12 +203,9 @@ recursive_lock_release(pTHX_ recursive_lock_t *lock)
     MUTEX_LOCK(&lock->mutex);
     if (lock->owner != aTHX) {
         MUTEX_UNLOCK(&lock->mutex);
-    }
-    else {
-        if (--lock->locks == 0) {
-            lock->owner = NULL;
-            COND_SIGNAL(&lock->cond);
-        }
+    } else if (--lock->locks == 0) {
+        lock->owner = NULL;
+        COND_SIGNAL(&lock->cond);
     }
     MUTEX_UNLOCK(&lock->mutex);
 }
@@ -220,8 +217,7 @@ recursive_lock_acquire(pTHX_ recursive_lock_t *lock, char *file, int line)
     MUTEX_LOCK(&lock->mutex);
     if (lock->owner == aTHX) {
         lock->locks++;
-    }
-    else {
+    } else {
         while (lock->owner) {
 #ifdef DEBUG_LOCKS
             Perl_warn(aTHX_ " %p waiting - owned by %p %s:%d\n",
@@ -292,7 +288,7 @@ sharedsv_userlock_free(pTHX_ SV *sv, MAGIC *mg)
         PerlMemShared_free(ul);
         mg->mg_ptr = NULL;
     }
-    return 0;
+    return (0);
 }
 
 MGVTBL sharedsv_userlock_vtbl = {
@@ -332,13 +328,13 @@ MGVTBL sharedsv_elem_vtbl;      /* Elements of hashes and arrays have this
 STATIC SV *
 S_sharedsv_from_obj(pTHX_ SV *sv)
 {
-     return SvROK(sv) ? INT2PTR(SV *, SvIV(SvRV(sv))) : NULL;
+     return ((SvROK(sv)) ? INT2PTR(SV *, SvIV(SvRV(sv))) : NULL);
 }
 
 
 /* Return the user_lock structure (if any) associated with a shared SV.
- * If create is true, create one if it doesn't exist */
-
+ * If create is true, create one if it doesn't exist
+ */
 STATIC user_lock *
 S_get_userlock(pTHX_ SV* ssv, bool create)
 {
@@ -350,9 +346,9 @@ S_get_userlock(pTHX_ SV* ssv, bool create)
      * lock to access them ???? DAPM */
     ENTER_LOCK;
     mg = mg_find(ssv, PERL_MAGIC_ext);
-    if (mg)
+    if (mg) {
         ul = (user_lock*)(mg->mg_ptr);
-    else if (create) {
+    } else if (create) {
         dTHXc;
         SHARED_CONTEXT;
         ul = (user_lock *) PerlMemShared_malloc(sizeof(user_lock));
@@ -365,7 +361,7 @@ S_get_userlock(pTHX_ SV* ssv, bool create)
         CALLER_CONTEXT;
     }
     LEAVE_LOCK;
-    return ul;
+    return (ul);
 }
 
 
@@ -386,7 +382,7 @@ Perl_sharedsv_find(pTHX_ SV *sv)
         case SVt_PVHV:
             if ((mg = mg_find(sv, PERL_MAGIC_tied))
                 && mg->mg_virtual == &sharedsv_array_vtbl) {
-                return (SV *) mg->mg_ptr;
+                return ((SV *)mg->mg_ptr);
             }
             break;
         default:
@@ -395,22 +391,23 @@ Perl_sharedsv_find(pTHX_ SV *sv)
              */
             if ((mg = mg_find(sv, PERL_MAGIC_shared_scalar))
                 && mg->mg_virtual == &sharedsv_scalar_vtbl) {
-                return (SV *) mg->mg_ptr;
+                return ((SV *)mg->mg_ptr);
             }
             break;
         }
     }
     /* Just for tidyness of API also handle tie objects */
     if (SvROK(sv) && sv_derived_from(sv, "threads::shared::tie")) {
-        return S_sharedsv_from_obj(aTHX_ sv);
+        return (S_sharedsv_from_obj(aTHX_ sv));
     }
-    return NULL;
+    return (NULL);
 }
 
 
 /* Associate a private SV  with a shared SV by pointing the appropriate
- * magics at it.  Assumes lock is held. */
-
+ * magics at it.
+ * Assumes lock is held.
+ */
 void
 Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
 {
@@ -469,8 +466,8 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
 
 
 /* Given a private SV, create and return an associated shared SV.
- * Assumes lock is held. */
-
+ * Assumes lock is held.
+ */
 STATIC SV *
 S_sharedsv_new_shared(pTHX_ SV *sv)
 {
@@ -486,13 +483,13 @@ S_sharedsv_new_shared(pTHX_ SV *sv)
     sv_upgrade(ssv, SvTYPE(sv));
     CALLER_CONTEXT;
     Perl_sharedsv_associate(aTHX_ sv, ssv);
-    return ssv;
+    return (ssv);
 }
 
 
 /* Given a shared SV, create and return an associated private SV.
- * Assumes lock is held. */
-
+ * Assumes lock is held.
+ */
 STATIC SV *
 S_sharedsv_new_private(pTHX_ SV *ssv)
 {
@@ -504,7 +501,7 @@ S_sharedsv_new_private(pTHX_ SV *ssv)
     sv = newSV(0);
     sv_upgrade(sv, SvTYPE(ssv));
     Perl_sharedsv_associate(aTHX_ sv, ssv);
-    return sv;
+    return (sv);
 }
 
 
@@ -513,14 +510,13 @@ S_sharedsv_new_private(pTHX_ SV *ssv)
 STATIC void
 S_sharedsv_dec(pTHX_ SV* ssv)
 {
-    if (!ssv)
+    if (! ssv)
         return;
     ENTER_LOCK;
     if (SvREFCNT(ssv) > 1) {
         /* No side effects, so can do it lightweight */
         SvREFCNT_dec(ssv);
-    }
-    else {
+    } else {
         dTHXc;
         SHARED_CONTEXT;
         SvREFCNT_dec(ssv);
@@ -528,6 +524,7 @@ S_sharedsv_dec(pTHX_ SV* ssv)
     }
     LEAVE_LOCK;
 }
+
 
 /* Implements Perl-level share() and :shared */
 
@@ -551,6 +548,7 @@ Perl_sharedsv_share(pTHX_ SV *sv)
         break;
     }
 }
+
 
 #if defined(WIN32) || defined(OS2)
 #  define ABS2RELMILLI(abs)             \
@@ -587,7 +585,7 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
     }
     MUTEX_LOCK(mut);
     cond->waiters--;
-    return got_it;
+    return (got_it);
 #  else
 #    ifdef OS2
     int rc, got_it = 0;
@@ -603,7 +601,7 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
         croak_with_os2error("panic: cond_timedwait");
     if (rc == ERROR_INTERRUPT) errno = EINTR;
     MUTEX_LOCK(mut);
-    return got_it;
+    return (got_it);
 #    else         /* Hope you're I_PTHREAD! */
     struct timespec ts;
     int got_it = 0;
@@ -619,7 +617,7 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
             Perl_croak_nocontext("panic: cond_timedwait");
             break;
     }
-    return got_it;
+    return (got_it);
 #    endif /* OS2 */
 #  endif /* WIN32 */
 #endif /* NETWARE || FAKE_THREADS || I_MACH_CTHREADS */
@@ -631,23 +629,19 @@ Perl_sharedsv_cond_timedwait(perl_cond *cond, perl_mutex *mut, double abs)
  * If the private side is already an appropriate RV->SV combination, keep
  * it if possible.
  */
-
 STATIC void
 S_get_RV(pTHX_ SV *sv, SV *ssv) {
     SV *sobj = SvRV(ssv);
     SV *obj;
-    if ( ! (   SvROK(sv)
-            && ((obj = SvRV(sv)))
-            && (Perl_sharedsv_find(aTHX_ obj) == sobj)
-            && (SvTYPE(obj) == SvTYPE(sobj))
-            )
-        )
+    if (! (SvROK(sv) &&
+           ((obj = SvRV(sv))) &&
+           (Perl_sharedsv_find(aTHX_ obj) == sobj) &&
+           (SvTYPE(obj) == SvTYPE(sobj))))
     {
         /* Can't reuse obj */
-        if (SvROK(sv))  {
+        if (SvROK(sv)) {
             SvREFCNT_dec(SvRV(sv));
-        }
-        else {
+        } else {
             assert(SvTYPE(sv) >= SVt_RV);
             sv_setsv_nomg(sv, &PL_sv_undef);
             SvROK_on(sv);
@@ -685,18 +679,17 @@ sharedsv_scalar_mg_get(pTHX_ SV *sv, MAGIC *mg)
     ENTER_LOCK;
     if (SvROK(ssv)) {
         S_get_RV(aTHX_ sv, ssv);
-    }
-    else {
+    } else {
         sv_setsv_nomg(sv, ssv);
     }
     LEAVE_LOCK;
-    return 0;
+    return (0);
 }
 
 /* Copy the contents of a private SV to a shared SV.
  * Used by various mg_set()-type functions.
- * Assumes lock is held. */
-
+ * Assumes lock is held.
+ */
 void
 sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
 {
@@ -714,22 +707,20 @@ sharedsv_scalar_store(pTHX_ SV *sv, SV *ssv)
 
             SvRV_set(ssv, SvREFCNT_inc(sobj));
             SvROK_on(ssv);
-            if(SvOBJECT(obj)) {
+            if (SvOBJECT(obj)) {
               SV* fake_stash = newSVpv(HvNAME_get(SvSTASH(obj)),0);
               SvOBJECT_on(sobj);
               SvSTASH_set(sobj, (HV*)fake_stash);
             }
             CALLER_CONTEXT;
-        }
-        else {
+        } else {
             allowed = FALSE;
         }
-    }
-    else {
+    } else {
         SvTEMP_off(sv);
         SHARED_CONTEXT;
         sv_setsv_nomg(ssv, sv);
-        if(SvOBJECT(sv)) {
+        if (SvOBJECT(sv)) {
           SV* fake_stash = newSVpv(HvNAME_get(SvSTASH(sv)),0);
           SvOBJECT_on(ssv);
           SvSTASH_set(ssv, (HV*)fake_stash);
@@ -757,7 +748,7 @@ sharedsv_scalar_mg_set(pTHX_ SV *sv, MAGIC *mg)
     }
     sharedsv_scalar_store(aTHX_ sv, ssv);
     LEAVE_LOCK;
-    return 0;
+    return (0);
 }
 
 /* Free magic for PERL_MAGIC_shared_scalar(n) */
@@ -766,7 +757,7 @@ int
 sharedsv_scalar_mg_free(pTHX_ SV *sv, MAGIC *mg)
 {
     S_sharedsv_dec(aTHX_ (SV*)mg->mg_ptr);
-    return 0;
+    return (0);
 }
 
 /*
@@ -776,7 +767,7 @@ int
 sharedsv_scalar_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
     SvREFCNT_inc(mg->mg_ptr);
-    return 0;
+    return (0);
 }
 
 #ifdef MGf_LOCAL
@@ -798,7 +789,7 @@ sharedsv_scalar_mg_local(pTHX_ SV* nsv, MAGIC *mg)
     nmg->mg_flags   = mg->mg_flags;
     nmg->mg_private = mg->mg_private;
 
-    return 0;
+    return (0);
 }
 #endif
 
@@ -831,8 +822,7 @@ sharedsv_elem_mg_FETCH(pTHX_ SV *sv, MAGIC *mg)
         assert ( mg->mg_ptr == 0 );
         SHARED_CONTEXT;
         svp = av_fetch((AV*) saggregate, mg->mg_len, 0);
-    }
-    else {
+    } else {
         char *key = mg->mg_ptr;
         STRLEN len = mg->mg_len;
         assert ( mg->mg_ptr != 0 );
@@ -847,20 +837,18 @@ sharedsv_elem_mg_FETCH(pTHX_ SV *sv, MAGIC *mg)
         /* Exists in the array */
         if (SvROK(*svp)) {
             S_get_RV(aTHX_ sv, *svp);
-        }
-        else {
+        } else {
             /* XXX Can this branch ever happen? DAPM */
             /* XXX assert("no such branch"); */
             Perl_sharedsv_associate(aTHX_ sv, *svp);
             sv_setsv(sv, *svp);
         }
-    }
-    else {
+    } else {
         /* Not in the array */
         sv_setsv(sv, &PL_sv_undef);
     }
     LEAVE_LOCK;
-    return 0;
+    return (0);
 }
 
 /* Set magic for PERL_MAGIC_tiedelem(p) */
@@ -881,8 +869,7 @@ sharedsv_elem_mg_STORE(pTHX_ SV *sv, MAGIC *mg)
         assert ( mg->mg_ptr == 0 );
         SHARED_CONTEXT;
         svp = av_fetch((AV*) saggregate, mg->mg_len, 1);
-    }
-    else {
+    } else {
         char *key = mg->mg_ptr;
         STRLEN len = mg->mg_len;
         assert ( mg->mg_ptr != 0 );
@@ -895,7 +882,7 @@ sharedsv_elem_mg_STORE(pTHX_ SV *sv, MAGIC *mg)
     Perl_sharedsv_associate(aTHX_ sv, *svp);
     sharedsv_scalar_store(aTHX_ sv, *svp);
     LEAVE_LOCK;
-    return 0;
+    return (0);
 }
 
 /* Clear magic for PERL_MAGIC_tiedelem(p) */
@@ -913,8 +900,7 @@ sharedsv_elem_mg_DELETE(pTHX_ SV *sv, MAGIC *mg)
     if (SvTYPE(saggregate) == SVt_PVAV) {
         SHARED_CONTEXT;
         av_delete((AV*) saggregate, mg->mg_len, G_DISCARD);
-    }
-    else {
+    } else {
         char *key = mg->mg_ptr;
         STRLEN len = mg->mg_len;
         assert ( mg->mg_ptr != 0 );
@@ -925,7 +911,7 @@ sharedsv_elem_mg_DELETE(pTHX_ SV *sv, MAGIC *mg)
     }
     CALLER_CONTEXT;
     LEAVE_LOCK;
-    return 0;
+    return (0);
 }
 
 /* Called during cloning of PERL_MAGIC_tiedelem(p) magic in new
@@ -936,7 +922,7 @@ sharedsv_elem_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
     SvREFCNT_inc(S_sharedsv_from_obj(aTHX_ mg->mg_obj));
     assert(mg->mg_flags & MGf_DUP);
-    return 0;
+    return (0);
 }
 
 MGVTBL sharedsv_elem_vtbl = {
@@ -965,13 +951,12 @@ sharedsv_array_mg_FETCHSIZE(pTHX_ SV *sv, MAGIC *mg)
     SHARED_EDIT;
     if (SvTYPE(ssv) == SVt_PVAV) {
         val = av_len((AV*) ssv);
-    }
-    else {
+    } else {
         /* Not actually defined by tie API but ... */
         val = HvKEYS((HV*) ssv);
     }
     SHARED_RELEASE;
-    return val;
+    return (val);
 }
 
 /* Clear magic for PERL_MAGIC_tied(P) */
@@ -984,12 +969,11 @@ sharedsv_array_mg_CLEAR(pTHX_ SV *sv, MAGIC *mg)
     SHARED_EDIT;
     if (SvTYPE(ssv) == SVt_PVAV) {
         av_clear((AV*) ssv);
-    }
-    else {
+    } else {
         hv_clear((HV*) ssv);
     }
     SHARED_RELEASE;
-    return 0;
+    return (0);
 }
 
 /* Free magic for PERL_MAGIC_tied(P) */
@@ -998,7 +982,7 @@ int
 sharedsv_array_mg_free(pTHX_ SV *sv, MAGIC *mg)
 {
     S_sharedsv_dec(aTHX_ (SV*)mg->mg_ptr);
-    return 0;
+    return (0);
 }
 
 /*
@@ -1014,7 +998,7 @@ sharedsv_array_mg_copy(pTHX_ SV *sv, MAGIC* mg,
                             toLOWER(mg->mg_type),&sharedsv_elem_vtbl,
                             name, namlen);
     nmg->mg_flags |= MGf_DUP;
-    return 1;
+    return (1);
 }
 
 /* Called during cloning of PERL_MAGIC_tied(P) magic in new thread */
@@ -1024,7 +1008,7 @@ sharedsv_array_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
 {
     SvREFCNT_inc((SV*)mg->mg_ptr);
     assert(mg->mg_flags & MGf_DUP);
-    return 0;
+    return (0);
 }
 
 MGVTBL sharedsv_array_vtbl = {
@@ -1065,7 +1049,7 @@ void
 Perl_sharedsv_lock(pTHX_ SV *ssv)
 {
     user_lock *ul;
-    if (!ssv)
+    if (! ssv)
         return;
     ul = S_get_userlock(aTHX_ ssv, 1);
     recursive_lock_acquire(aTHX_ &ul->lock, __FILE__, __LINE__);
@@ -1078,10 +1062,10 @@ Perl_sharedsv_locksv(pTHX_ SV *sv)
 {
     SV *ssv;
 
-    if(SvROK(sv))
+    if (SvROK(sv))
         sv = SvRV(sv);
     ssv = Perl_sharedsv_find(aTHX_ sv);
-    if(!ssv)
+    if (!ssv)
        croak("lock can only be used on shared values");
     Perl_sharedsv_lock(aTHX_ ssv);
 }
@@ -1090,7 +1074,7 @@ Perl_sharedsv_locksv(pTHX_ SV *sv)
 
 =for apidoc sharedsv_init
 
-Saves a space for keeping SVs wider than an interpreter,
+Saves a space for keeping SVs wider than an interpreter.
 
 =cut
 
@@ -1121,7 +1105,7 @@ PUSH(SV *obj, ...)
         dTHXc;
         SV *sobj = S_sharedsv_from_obj(aTHX_ obj);
         int i;
-        for(i = 1; i < items; i++) {
+        for (i = 1; i < items; i++) {
             SV* tmp = newSVsv(ST(i));
             SV *stmp;
             ENTER_LOCK;
@@ -1134,6 +1118,7 @@ PUSH(SV *obj, ...)
             SvREFCNT_dec(tmp);
         }
 
+
 void
 UNSHIFT(SV *obj, ...)
     CODE:
@@ -1144,7 +1129,7 @@ UNSHIFT(SV *obj, ...)
         SHARED_CONTEXT;
         av_unshift((AV*)sobj, items - 1);
         CALLER_CONTEXT;
-        for(i = 1; i < items; i++) {
+        for (i = 1; i < items; i++) {
             SV *tmp = newSVsv(ST(i));
             SV *stmp = S_sharedsv_new_shared(aTHX_ tmp);
             sharedsv_scalar_store(aTHX_ tmp, stmp);
@@ -1155,6 +1140,7 @@ UNSHIFT(SV *obj, ...)
             SvREFCNT_dec(tmp);
         }
         LEAVE_LOCK;
+
 
 void
 POP(SV *obj)
@@ -1170,7 +1156,8 @@ POP(SV *obj)
         Perl_sharedsv_associate(aTHX_ ST(0), ssv);
         SvREFCNT_dec(ssv);
         LEAVE_LOCK;
-        XSRETURN(1);
+        /* XSRETURN(1); - implied */
+
 
 void
 SHIFT(SV *obj)
@@ -1186,7 +1173,8 @@ SHIFT(SV *obj)
         Perl_sharedsv_associate(aTHX_ ST(0), ssv);
         SvREFCNT_dec(ssv);
         LEAVE_LOCK;
-        XSRETURN(1);
+        /* XSRETURN(1); - implied */
+
 
 void
 EXTEND(SV *obj, IV count)
@@ -1196,6 +1184,7 @@ EXTEND(SV *obj, IV count)
         SHARED_EDIT;
         av_extend((AV*)sobj, count);
         SHARED_RELEASE;
+
 
 void
 STORESIZE(SV *obj,IV count)
@@ -1216,8 +1205,7 @@ EXISTS(SV *obj, SV *index)
         if (SvTYPE(sobj) == SVt_PVAV) {
             SHARED_EDIT;
             exists = av_exists((AV*) sobj, SvIV(index));
-        }
-        else {
+        } else {
             STRLEN len;
             char *key = SvPV(index,len);
             SHARED_EDIT;
@@ -1225,7 +1213,7 @@ EXISTS(SV *obj, SV *index)
         }
         SHARED_RELEASE;
         ST(0) = (exists) ? &PL_sv_yes : &PL_sv_no;
-        XSRETURN(1);
+        /* XSRETURN(1); - implied */
 
 
 void
@@ -1241,15 +1229,16 @@ FIRSTKEY(SV *obj)
         hv_iterinit((HV*) sobj);
         entry = hv_iternext((HV*) sobj);
         if (entry) {
-                key = hv_iterkey(entry,&len);
-                CALLER_CONTEXT;
-                ST(0) = sv_2mortal(newSVpv(key, len));
+            key = hv_iterkey(entry,&len);
+            CALLER_CONTEXT;
+            ST(0) = sv_2mortal(newSVpv(key, len));
         } else {
-             CALLER_CONTEXT;
-             ST(0) = &PL_sv_undef;
+            CALLER_CONTEXT;
+            ST(0) = &PL_sv_undef;
         }
         LEAVE_LOCK;
-        XSRETURN(1);
+        /* XSRETURN(1); - implied */
+
 
 void
 NEXTKEY(SV *obj, SV *oldkey)
@@ -1263,15 +1252,15 @@ NEXTKEY(SV *obj, SV *oldkey)
         SHARED_CONTEXT;
         entry = hv_iternext((HV*) sobj);
         if (entry) {
-                key = hv_iterkey(entry,&len);
-                CALLER_CONTEXT;
-                ST(0) = sv_2mortal(newSVpv(key, len));
+            key = hv_iterkey(entry,&len);
+            CALLER_CONTEXT;
+            ST(0) = sv_2mortal(newSVpv(key, len));
         } else {
-             CALLER_CONTEXT;
-             ST(0) = &PL_sv_undef;
+            CALLER_CONTEXT;
+            ST(0) = &PL_sv_undef;
         }
         LEAVE_LOCK;
-        XSRETURN(1);
+        /* XSRETURN(1); - implied */
 
 
 MODULE = threads::shared        PACKAGE = threads::shared
@@ -1281,63 +1270,67 @@ PROTOTYPES: ENABLE
 void
 _id(SV *ref)
     PROTOTYPE: \[$@%]
-    CODE:
+    PREINIT:
         SV *ssv;
+    CODE:
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
-        if( (ssv = Perl_sharedsv_find(aTHX_ ref)) ){
-            ST(0) = sv_2mortal(newSViv(PTR2IV(ssv)));
-            XSRETURN(1);
-        }
-        XSRETURN_UNDEF;
+        ssv = Perl_sharedsv_find(aTHX_ ref);
+        if (! ssv)
+            XSRETURN_UNDEF;
+        ST(0) = sv_2mortal(newSVuv(PTR2UV(ssv)));
+        /* XSRETURN(1); - implied */
 
 
 void
 _refcnt(SV *ref)
     PROTOTYPE: \[$@%]
-    CODE:
+    PREINIT:
         SV *ssv;
+    CODE:
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
-        if( (ssv = Perl_sharedsv_find(aTHX_ ref)) ) {
-            ST(0) = sv_2mortal(newSViv(SvREFCNT(ssv)));
-            XSRETURN(1);
+        ssv = Perl_sharedsv_find(aTHX_ ref);
+        if (! ssv) {
+            Perl_warn(aTHX_ "%" SVf " is not shared", ST(0));
+            XSRETURN_UNDEF;
         }
-        else {
-             Perl_warn(aTHX_ "%" SVf " is not shared",ST(0));
-        }
-        XSRETURN_UNDEF;
+        ST(0) = sv_2mortal(newSViv(SvREFCNT(ssv)));
+        /* XSRETURN(1); - implied */
 
-SV*
+
+void
 share(SV *ref)
     PROTOTYPE: \[$@%]
     CODE:
-        if(!SvROK(ref))
+        if (! SvROK(ref))
             Perl_croak(aTHX_ "Argument to share needs to be passed as ref");
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
         Perl_sharedsv_share(aTHX_ ref);
-        RETVAL = newRV_inc(ref);
-    OUTPUT:
-        RETVAL
+        ST(0) = sv_2mortal(newRV_inc(ref));
+        /* XSRETURN(1); - implied */
+
 
 void
 lock_enabled(SV *ref)
     PROTOTYPE: \[$@%]
-    CODE:
+    PREINIT:
         SV *ssv;
-        if(!SvROK(ref))
+    CODE:
+        if (! SvROK(ref))
             Perl_croak(aTHX_ "Argument to lock needs to be passed as ref");
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
         ssv = Perl_sharedsv_find(aTHX_ ref);
-        if(!ssv)
-           croak("lock can only be used on shared values");
+        if (! ssv)
+           Perl_croak(aTHX_ "lock can only be used on shared values");
         Perl_sharedsv_lock(aTHX_ ssv);
+
 
 void
 cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
@@ -1346,34 +1339,30 @@ cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
         SV *ssv;
         perl_cond* user_condition;
         int locks;
-        int same = 0;
         user_lock *ul;
-
     CODE:
-        if (!ref_lock || ref_lock == ref_cond) same = 1;
-
-        if(!SvROK(ref_cond))
+        if (!SvROK(ref_cond))
             Perl_croak(aTHX_ "Argument to cond_wait needs to be passed as ref");
         ref_cond = SvRV(ref_cond);
-        if(SvROK(ref_cond))
+        if (SvROK(ref_cond))
             ref_cond = SvRV(ref_cond);
         ssv = Perl_sharedsv_find(aTHX_ ref_cond);
-        if(!ssv)
-            croak("cond_wait can only be used on shared values");
+        if (! ssv)
+            Perl_croak(aTHX_ "cond_wait can only be used on shared values");
         ul = S_get_userlock(aTHX_ ssv, 1);
 
         user_condition = &ul->user_cond;
-        if (! same) {
+        if (ref_lock && (ref_cond != ref_lock)) {
             if (!SvROK(ref_lock))
                 Perl_croak(aTHX_ "cond_wait lock needs to be passed as ref");
             ref_lock = SvRV(ref_lock);
             if (SvROK(ref_lock)) ref_lock = SvRV(ref_lock);
             ssv = Perl_sharedsv_find(aTHX_ ref_lock);
-            if (!ssv)
-                croak("cond_wait lock must be a shared value");
+            if (! ssv)
+                Perl_croak(aTHX_ "cond_wait lock must be a shared value");
             ul = S_get_userlock(aTHX_ ssv, 1);
         }
-        if(ul->lock.owner != aTHX)
+        if (ul->lock.owner != aTHX)
             croak("You need a lock before you can cond_wait");
         /* Stealing the members of the lock object worries me - NI-S */
         MUTEX_LOCK(&ul->lock.mutex);
@@ -1393,6 +1382,7 @@ cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
         ul->lock.locks = locks;
         MUTEX_UNLOCK(&ul->lock.mutex);
 
+
 int
 cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
     PROTOTYPE: \[$@%]$;\[$@%]
@@ -1400,35 +1390,31 @@ cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
         SV *ssv;
         perl_cond* user_condition;
         int locks;
-        int same = 0;
         user_lock *ul;
-
     CODE:
-        if (!ref_lock || ref_cond == ref_lock) same = 1;
-
-        if(!SvROK(ref_cond))
+        if (! SvROK(ref_cond))
             Perl_croak(aTHX_ "Argument to cond_timedwait needs to be passed as ref");
         ref_cond = SvRV(ref_cond);
-        if(SvROK(ref_cond))
+        if (SvROK(ref_cond))
             ref_cond = SvRV(ref_cond);
         ssv = Perl_sharedsv_find(aTHX_ ref_cond);
-        if(!ssv)
-            croak("cond_timedwait can only be used on shared values");
+        if (! ssv)
+            Perl_croak(aTHX_ "cond_timedwait can only be used on shared values");
         ul = S_get_userlock(aTHX_ ssv, 1);
 
         user_condition = &ul->user_cond;
-        if (! same) {
-            if (!SvROK(ref_lock))
+        if (ref_lock && (ref_cond != ref_lock)) {
+            if (! SvROK(ref_lock))
                 Perl_croak(aTHX_ "cond_timedwait lock needs to be passed as ref");
             ref_lock = SvRV(ref_lock);
             if (SvROK(ref_lock)) ref_lock = SvRV(ref_lock);
             ssv = Perl_sharedsv_find(aTHX_ ref_lock);
-            if (!ssv)
-                croak("cond_timedwait lock must be a shared value");
+            if (! ssv)
+                Perl_croak(aTHX_ "cond_timedwait lock must be a shared value");
             ul = S_get_userlock(aTHX_ ssv, 1);
         }
-        if(ul->lock.owner != aTHX)
-            croak("You need a lock before you can cond_wait");
+        if (ul->lock.owner != aTHX)
+            Perl_croak(aTHX_ "You need a lock before you can cond_wait");
 
         MUTEX_LOCK(&ul->lock.mutex);
         ul->lock.owner = NULL;
@@ -1451,90 +1437,97 @@ cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
     OUTPUT:
         RETVAL
 
+
 void
 cond_signal_enabled(SV *ref)
     PROTOTYPE: \[$@%]
-    CODE:
+    PREINIT:
         SV *ssv;
         user_lock *ul;
-
-        if(!SvROK(ref))
+    CODE:
+        if (! SvROK(ref))
             Perl_croak(aTHX_ "Argument to cond_signal needs to be passed as ref");
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
         ssv = Perl_sharedsv_find(aTHX_ ref);
-        if(!ssv)
-            croak("cond_signal can only be used on shared values");
+        if (! ssv)
+            Perl_croak(aTHX_ "cond_signal can only be used on shared values");
         ul = S_get_userlock(aTHX_ ssv, 1);
-        if (ckWARN(WARN_THREADS) && ul->lock.owner != aTHX)
+        if (ckWARN(WARN_THREADS) && ul->lock.owner != aTHX) {
             Perl_warner(aTHX_ packWARN(WARN_THREADS),
                             "cond_signal() called on unlocked variable");
+        }
         COND_SIGNAL(&ul->user_cond);
+
 
 void
 cond_broadcast_enabled(SV *ref)
     PROTOTYPE: \[$@%]
-    CODE:
+    PREINIT:
         SV *ssv;
         user_lock *ul;
-
-        if(!SvROK(ref))
+    CODE:
+        if (! SvROK(ref))
             Perl_croak(aTHX_ "Argument to cond_broadcast needs to be passed as ref");
         ref = SvRV(ref);
-        if(SvROK(ref))
+        if (SvROK(ref))
             ref = SvRV(ref);
         ssv = Perl_sharedsv_find(aTHX_ ref);
-        if(!ssv)
-            croak("cond_broadcast can only be used on shared values");
+        if (! ssv)
+            Perl_croak(aTHX_ "cond_broadcast can only be used on shared values");
         ul = S_get_userlock(aTHX_ ssv, 1);
-        if (ckWARN(WARN_THREADS) && ul->lock.owner != aTHX)
+        if (ckWARN(WARN_THREADS) && ul->lock.owner != aTHX) {
             Perl_warner(aTHX_ packWARN(WARN_THREADS),
                             "cond_broadcast() called on unlocked variable");
+        }
         COND_BROADCAST(&ul->user_cond);
 
 
-SV*
+void
 bless(SV* ref, ...);
     PROTOTYPE: $;$
+    PREINIT:
+        HV* stash;
+        SV *ssv;
     CODE:
-        {
-          HV* stash;
-          SV *ssv;
-          if (items == 1)
+        if (items == 1) {
             stash = CopSTASH(PL_curcop);
-          else {
+        } else {
             SV* classname = ST(1);
             STRLEN len;
             char *ptr;
 
-            if (classname && !SvGMAGICAL(classname) &&
-                        !SvAMAGIC(classname) && SvROK(classname))
-              Perl_croak(aTHX_ "Attempt to bless into a reference");
-            ptr = SvPV(classname,len);
-            if (ckWARN(WARN_MISC) && len == 0)
-              Perl_warner(aTHX_ packWARN(WARN_MISC),
-                          "Explicit blessing to '' (assuming package main)");
+            if (classname &&
+                ! SvGMAGICAL(classname) &&
+                ! SvAMAGIC(classname) &&
+                SvROK(classname))
+            {
+                Perl_croak(aTHX_ "Attempt to bless into a reference");
+            }
+            ptr = SvPV(classname, len);
+            if (ckWARN(WARN_MISC) && len == 0) {
+                Perl_warner(aTHX_ packWARN(WARN_MISC),
+                        "Explicit blessing to '' (assuming package main)");
+            }
             stash = gv_stashpvn(ptr, len, TRUE);
-          }
-          SvREFCNT_inc(ref);
-          (void)sv_bless(ref, stash);
-          RETVAL = ref;
-          ssv = Perl_sharedsv_find(aTHX_ ref);
-          if(ssv) {
+        }
+        SvREFCNT_inc(ref);
+        (void)sv_bless(ref, stash);
+        ST(0) = sv_2mortal(ref);
+        ssv = Perl_sharedsv_find(aTHX_ ref);
+        if (ssv) {
             dTHXc;
             ENTER_LOCK;
             SHARED_CONTEXT;
             {
-              SV* fake_stash = newSVpv(HvNAME_get(stash),0);
-              (void)sv_bless(ssv,(HV*)fake_stash);
+                SV* fake_stash = newSVpv(HvNAME_get(stash), 0);
+                (void)sv_bless(ssv, (HV*)fake_stash);
             }
             CALLER_CONTEXT;
             LEAVE_LOCK;
-          }
         }
-    OUTPUT:
-        RETVAL
+        /* XSRETURN(1); - implied */
 
 #endif /* USE_ITHREADS */
 

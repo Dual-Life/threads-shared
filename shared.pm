@@ -11,7 +11,7 @@ BEGIN {
     our @EXPORT = qw(share is_shared cond_wait cond_timedwait
                      cond_broadcast cond_signal);
 
-    our $VERSION = '0.97';
+    our $VERSION = '0.98';
 
     if ($threads::threads) {
         *cond_wait      = \&cond_wait_enabled;
@@ -59,7 +59,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 0.97
+This document describes threads::shared version 0.98
 
 =head1 SYNOPSIS
 
@@ -103,7 +103,7 @@ C<share>, C<cond_wait>, C<cond_timedwait>, C<cond_signal>, C<cond_broadcast>,
 C<is_shared>
 
 Note that if this module is imported when L<threads> has not yet been loaded,
-then these functions all become no-ops. This makes it possible to write
+then these functions all become no-ops.  This makes it possible to write
 modules that will work in both threaded and non-threaded environments.
 
 =head1 FUNCTIONS
@@ -156,13 +156,13 @@ L<refaddr()|Scalar::Util/"refaddr EXPR">).  Otherwise, returns C<undef>.
 
 C<lock> places a lock on a variable until the lock goes out of scope.  If the
 variable is locked by another thread, the C<lock> call will block until it's
-available. C<lock> is recursive, so multiple calls to C<lock> are safe -- the
+available.  C<lock> is recursive, so multiple calls to C<lock> are safe -- the
 variable will remain locked until the outermost lock on the variable goes out
 of scope.
 
 If a container object, such as a hash or array, is locked, all the elements of
-that container are not locked. For example, if a thread does a C<lock @a>, any
-other thread doing a C<lock($a[12])> won't block.
+that container are not locked.  For example, if a thread does a C<lock @a>,
+any other thread doing a C<lock($a[12])> won't block.
 
 C<lock> will traverse up references exactly I<one> level.  C<lock(\$a)> is
 equivalent to C<lock($a)>, while C<lock(\\$a)> is not.
@@ -248,7 +248,7 @@ signaling before another thread has entered cond_wait().
 
 C<cond_signal> will normally generate a warning if you attempt to use it on an
 unlocked variable. On the rare occasions where doing this may be sensible, you
-can skip the warning with
+can skip the warning with:
 
   { no warnings 'threads'; cond_signal($foo); }
 
@@ -353,7 +353,7 @@ L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
 Annotated POD for L<threads::shared>:
-L<http://annocpan.org/~JDHEDDEN/threads-shared-0.97/shared.pm>
+L<http://annocpan.org/~JDHEDDEN/threads-shared-0.98/shared.pm>
 
 L<threads>, L<perlthrtut>
 

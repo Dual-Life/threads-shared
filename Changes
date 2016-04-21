@@ -1,5 +1,8 @@
 Revision history for Perl extension threads::shared.
 
+0.98 Fri Mar 17 13:25:34 EST 2006
+	- XS code cleanup
+
 0.97 Mon Mar 13 14:30:50 EST 2006
 	- Cleaned up shared.h as part of the ppport.h upgrade
 	- Cleaned up tests
