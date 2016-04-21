@@ -93,4 +93,22 @@ WriteMakefile(
     @conditional_params
 );
 
+# Additional 'make' targets
+sub MY::postamble
+{
+    return <<'_EXTRAS_';
+fixfiles:
+	@dos2unix `cat MANIFEST`
+	@$(CHMOD) 644 `cat MANIFEST`
+	@$(CHMOD) 755 examples/*.pl
+
+ppport:
+	@( cd /tmp; perl -e 'use Devel::PPPort; Devel::PPPort::WriteFile("ppport.h");' )
+	@if ! cmp -s ppport.h /tmp/ppport.h; then \
+	    ( tkdiff ppport.h /tmp/ppport.h & ); \
+	    perl /tmp/ppport.h; \
+	fi
+_EXTRAS_
+}
+
 # EOF

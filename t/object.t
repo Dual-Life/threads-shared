@@ -21,7 +21,7 @@ use ExtUtils::testlib;
 
 BEGIN {
     $| = 1;
-    print("1..23\n");   ### Number of tests that will be run ###
+    print("1..28\n");   ### Number of tests that will be run ###
 };
 
 use threads;
@@ -66,7 +66,7 @@ ok(1, 'Loaded');
     {
         my ($self, $cookie) = @_;
         push(@jar, $cookie);
-        return $jar[-1];        # Reaults in destruction of proxy object
+        return $jar[-1];        # Results in destruction of proxy object
     }
 
     sub peek
@@ -141,11 +141,41 @@ threads->create(sub {
     ok($jar->peek()->{'type'} eq $C3, 'Still have cookie in jar');
 })->join();
 
-ok($cookie->{'type'}      eq $C1, 'Have changed cooke after thread');
+ok($cookie->{'type'}      eq $C1, 'Have changed cookie after thread');
 ok($jar->peek()->{'type'} eq $C3, 'Still have cookie in jar');
 undef($cookie);
 ok($jar->peek()->{'type'} eq $C3, 'Still have cookie in jar');
 $cookie = $jar->fetch();
 ok($cookie->{'type'}      eq $C3, 'Fetched cookie from jar');
+
+{ package Foo;
+
+    my $ID = 1;
+    threads::shared::share($ID);
+
+    sub new
+    {
+        # Anonymous scalar with an internal ID
+        my $obj = \do{ my $scalar = $ID++; };
+        threads::shared::share($obj);   # Make it shared
+        return (bless($obj, 'Foo'));    # Make it an object
+    }
+}
+
+my $obj :shared;
+$obj = Foo->new();
+ok($$obj == 1, "Main: Object ID $$obj");
+
+threads->create( sub {
+        ok($$obj == 1, "Thread: Object ID $$obj");
+
+        $$obj = 10;
+        ok($$obj == 10, "Thread: Changed object ID $$obj");
+
+        $obj = Foo->new();
+        ok($$obj == 2, "Thread: New object ID $$obj");
+    } )->join();
+
+ok($$obj == 2, "Main: New object ID $$obj  # TODO - should be 2");
 
 # EOF
