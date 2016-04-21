@@ -11,7 +11,7 @@ BEGIN {
     our @EXPORT = qw(share is_shared cond_wait cond_timedwait
                      cond_broadcast cond_signal);
 
-    our $VERSION = '0.96';
+    our $VERSION = '0.97';
 
     if ($threads::threads) {
         *cond_wait      = \&cond_wait_enabled;
@@ -59,7 +59,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 0.96
+This document describes threads::shared version 0.97
 
 =head1 SYNOPSIS
 
@@ -353,11 +353,9 @@ L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
 Annotated POD for L<threads::shared>:
-L<http://annocpan.org/~JDHEDDEN/threads-shared-0.96/shared.pm>
+L<http://annocpan.org/~JDHEDDEN/threads-shared-0.97/shared.pm>
 
-L<threads>
-
-L<perlthrtut>
+L<threads>, L<perlthrtut>
 
 L<http://www.perl.com/pub/a/2002/06/11/threads.html> and
 L<http://www.perl.com/pub/a/2002/09/04/threads.html>
@@ -367,7 +365,7 @@ L<http://lists.cpan.org/showlist.cgi?name=iThreads>
 
 =head1 AUTHOR
 
-Arthur Bergman E<lt>arthur AT contiller DOT seE<gt>
+Artur Bergman E<lt>sky AT crucially DOT netE<gt>
 
 threads::shared is released under the same license as Perl.
 

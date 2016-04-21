@@ -1,32 +1,51 @@
-# cond_wait and cond_timedwait extended tests
-# adapted from cond.t
-
 use strict;
 use warnings;
 
-use Config;
 BEGIN {
-    unless ($Config{'useithreads'}) {
-        print "1..0 # Skip: no threads\n";
-        exit 0;
+    if (-d 't') {
+        chdir('t');
+    }
+    if (-d '../lib') {
+        push(@INC, '../lib');
+    }
+    use Config;
+    if (! $Config{'useithreads'}) {
+        print("1..0 # Skip: Perl not compiled with 'useithreads'\n");
+        exit(0);
     }
 }
 
-$|++;
-print "1..102\n";
-
-use threads;
-use threads::shared;
 use ExtUtils::testlib;
 
 my $Base = 0;
-
 sub ok {
-    my ($offset, $bool, $text) = @_;
-    my $not = '';
-    $not = "not " unless $bool;
-    print "${not}ok " . ($Base + $offset) . " - $text\n";
+    my ($id, $ok, $name) = @_;
+    $id += $Base;
+
+    # You have to do it this way or VMS will get confused.
+    if ($ok) {
+        print("ok $id - $name\n");
+    } else {
+        print("not ok $id - $name\n");
+        printf("# Failed test at line %d\n", (caller)[2]);
+    }
+
+    return ($ok);
 }
+
+BEGIN {
+    $| = 1;
+    print("1..103\n");   ### Number of tests that will be run ###
+};
+
+use threads;
+use threads::shared;
+ok(1, 1, 'Loaded');
+$Base++;
+
+### Start of Testing ###
+
+# cond_wait and cond_timedwait extended tests adapted from cond.t
 
 sub forko (&$$); # To prevent deadlock from underlying pthread_* bugs (as in
                  # stock RH9 glibc/NPTL) or from our own errors, we run tests
@@ -92,7 +111,6 @@ SYNC_SHARED: {
   my $cond : shared;
   my $lock : shared;
 
-  print "# testing my \$var : shared\n";
   ok(1, 1, "Shared synchronization tests preparation");
   $Base += 1;
 
@@ -220,7 +238,6 @@ SYNCH_REFS: {
   my $cond = \$true_cond;
   my $lock = \$true_lock;
 
-  print "# testing reference to shared(\$var)\n";
   ok(1, 1, "Synchronization reference tests preparation");
   $Base += 1;
 

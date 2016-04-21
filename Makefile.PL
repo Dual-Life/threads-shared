@@ -9,7 +9,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     'NAME'              => 'threads::shared',
-    'AUTHOR'            => 'Arthur Bergman <arthur AT contiller DOT se>',
+    'AUTHOR'            => 'Artur Bergman <sky AT crucially DOT net>',
     'VERSION_FROM'      => 'shared.pm',
     'ABSTRACT_FROM'     => 'shared.pm',
     'PM' => {

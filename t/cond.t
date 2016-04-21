@@ -1,36 +1,51 @@
 use strict;
 use warnings;
 
-use Config;
 BEGIN {
-    unless ($Config{'useithreads'}) {
-        print "1..0 # Skip: no threads\n";
-        exit 0;
+    if (-d 't') {
+        chdir('t');
+    }
+    if (-d '../lib') {
+        push(@INC, '../lib');
+    }
+    use Config;
+    if (! $Config{'useithreads'}) {
+        print("1..0 # Skip: Perl not compiled with 'useithreads'\n");
+        exit(0);
     }
 }
 
-$|++;
-print "1..31\n";
+use ExtUtils::testlib;
+
+my $Base = 0;
+sub ok {
+    my ($id, $ok, $name) = @_;
+    $id += $Base;
+
+    # You have to do it this way or VMS will get confused.
+    if ($ok) {
+        print("ok $id - $name\n");
+    } else {
+        print("not ok $id - $name\n");
+        printf("# Failed test at line %d\n", (caller)[2]);
+    }
+
+    return ($ok);
+}
+
+BEGIN {
+    $| = 1;
+    print("1..32\n");   ### Number of tests that will be run ###
+};
 
 use threads;
 use threads::shared;
+ok(1, 1, 'Loaded');
+$Base++;
 
-# We can't use the normal ok() type stuff here, as part of the test is
-# to check that the numbers get printed in the right order. Instead, we
-# set a 'base' number for each part of the test and specify the ok()
-# number as an offset from that base.
-
-my $Base = 0;
-
-sub ok {
-    my ($offset, $bool, $text) = @_;
-    my $not = '';
-    $not = "not " unless $bool;
-    print "${not}ok " . ($Base + $offset) . " - $text\n";
-}
+### Start of Testing ###
 
 # test locking
-
 {
     my $lock : shared;
     my $tr;
@@ -39,13 +54,13 @@ sub ok {
 
     {
         lock($lock);
-        ok(1,1,"set first lock");
+        ok(1, 1, "set first lock");
         $tr = async {
             lock($lock);
-            ok(3,1,"set lock in subthread");
+            ok(3, 1, "set lock in subthread");
         };
         threads->yield;
-        ok(2,1,"still got lock");
+        ok(2, 1, "still got lock");
     }
     $tr->join;
 
@@ -98,7 +113,7 @@ sub ok {
 
     $Base += 3;
 
-    # Make sure a lock factory gives out fresh locks each time 
+    # Make sure a lock factory gives out fresh locks each time
     # for both attribute and run-time shares
 
     sub lock_factory1 { my $lock : shared; return \$lock; }
@@ -125,12 +140,11 @@ sub ok {
         ok(4,1,"lock factory: child: locked all locks");
     };
     $tr->join;
-        
+
     $Base += 4;
 }
 
 # test cond_signal()
-
 {
     my $lock : shared;
 
@@ -185,7 +199,6 @@ sub ok {
 
 
 # test cond_broadcast()
-
 {
     my $counter : shared = 0;
 
@@ -215,7 +228,6 @@ sub ok {
 
     threads->new(\&broad, 3)->join;
     ok(2, $counter == 33, "cond_broadcast: all three threads woken");
-    print "# counter=$counter\n";
 
     $Base += 2;
 
@@ -247,14 +259,13 @@ sub ok {
 
     threads->new(\&broad2, 3)->join;;
     ok(2, $$r == 33, "cond_broadcast: ref: all three threads woken");
-    print "# counter=$$r\n";
 
     $Base += 2;
 
 }
 
-# test warnings;
 
+# test warnings;
 {
     my $warncount = 0;
     local $SIG{__WARN__} = sub { $warncount++ };
@@ -271,7 +282,7 @@ sub ok {
     cond_broadcast($lock);
     ok(4, $warncount == 2, 'get no warning on cond_broadcast');
 
-    $Base += 4;
+    #$Base += 4;
 }
 
 # EOF

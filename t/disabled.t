@@ -1,21 +1,28 @@
 use strict;
 use warnings;
 
-use Config;
 BEGIN {
-    unless ($Config{'useithreads'}) {
-        print "1..0 # Skip: no useithreads\n";
-        exit 0;
+    if (-d 't') {
+        chdir('t');
+    }
+    if (-d '../lib') {
+        push(@INC, '../lib');
+    }
+    use Config;
+    if (! $Config{'useithreads'}) {
+        print("1..0 # Skip: Perl not compiled with 'useithreads'\n");
+        exit(0);
     }
 }
 
-# Can't use Test::More, it turns threads on.
 use Test;
 plan tests => 31;
 
 use threads::shared;
 
-# Make sure threads are really off.
+### Start of Testing ###
+
+# Make sure threads are really off
 ok( !$INC{"threads.pm"} );
 
 # Check each faked function.

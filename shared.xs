@@ -9,7 +9,7 @@
  * opposite directions."
  *                         --Sourcery
  *
- * Contributed by Arthur Bergman <arthur AT contiller DOT se>
+ * Contributed by Artur Bergman <sky AT crucially DOT net>
  * Pulled in the (an)other direction by Nick Ing-Simmons
  *      <nick AT ing-simmons DOT net>
  * CPAN version produced by Jerry D. Hedden <jdhedden AT cpan DOT org>
@@ -121,14 +121,10 @@
  * blead patches 26350+26351).
  *
  * The CPAN version of threads::shared contains the following blead patches:
+ *      26569 (applicable to 5.9.3 only)
  *      26684
  *      26693
  *      26695
- *
- * Blead patch 26569 contains a fix for 'local $shared'.  It cannot yet be
- * applied to the CPAN version of this module because it also contains changes
- * to mg.c/h which are outside this module.  (The API changes related to patch
- * 26569 are documented in patch 26735.)
  */
 
 #define PERL_NO_GET_CONTEXT
@@ -299,7 +295,7 @@ sharedsv_userlock_free(pTHX_ SV *sv, MAGIC *mg)
     return 0;
 }
 
-MGVTBL sharedsv_uesrlock_vtbl = {
+MGVTBL sharedsv_userlock_vtbl = {
     0,                          /* get */
     0,                          /* set */
     0,                          /* len */
@@ -307,6 +303,9 @@ MGVTBL sharedsv_uesrlock_vtbl = {
     sharedsv_userlock_free,     /* free */
     0,                          /* copy */
     0,                          /* dup */
+#ifdef MGf_LOCAL
+    0,                          /* local */
+#endif
 };
 
 /*
@@ -359,7 +358,7 @@ S_get_userlock(pTHX_ SV* ssv, bool create)
         ul = (user_lock *) PerlMemShared_malloc(sizeof(user_lock));
         Zero(ul, 1, user_lock);
         /* Attach to shared SV using ext magic */
-        sv_magicext(ssv, NULL, PERL_MAGIC_ext, &sharedsv_uesrlock_vtbl,
+        sv_magicext(ssv, NULL, PERL_MAGIC_ext, &sharedsv_userlock_vtbl,
                (char *)ul, 0);
         recursive_lock_init(aTHX_ &ul->lock);
         COND_INIT(&ul->user_cond);
@@ -455,7 +454,11 @@ Perl_sharedsv_associate(pTHX_ SV *sv, SV *ssv)
             }
             mg = sv_magicext(sv, Nullsv, PERL_MAGIC_shared_scalar,
                             &sharedsv_scalar_vtbl, (char *)ssv, 0);
-            mg->mg_flags |= (MGf_DUP);
+            mg->mg_flags |= (MGf_DUP
+#ifdef MGf_LOCAL
+                                    |MGf_LOCAL
+#endif
+                            );
             SvREFCNT_inc(ssv);
         }
         break;
@@ -776,6 +779,29 @@ sharedsv_scalar_mg_dup(pTHX_ MAGIC *mg, CLONE_PARAMS *param)
     return 0;
 }
 
+#ifdef MGf_LOCAL
+/*
+ * Called during local $shared
+ */
+int
+sharedsv_scalar_mg_local(pTHX_ SV* nsv, MAGIC *mg)
+{
+    MAGIC *nmg;
+    SV *ssv = (SV *) mg->mg_ptr;
+    if (ssv) {
+        ENTER_LOCK;
+        SvREFCNT_inc(ssv);
+        LEAVE_LOCK;
+    }
+    nmg = sv_magicext(nsv, mg->mg_obj, mg->mg_type, mg->mg_virtual,
+                            mg->mg_ptr, mg->mg_len);
+    nmg->mg_flags   = mg->mg_flags;
+    nmg->mg_private = mg->mg_private;
+
+    return 0;
+}
+#endif
+
 MGVTBL sharedsv_scalar_vtbl = {
     sharedsv_scalar_mg_get,     /* get */
     sharedsv_scalar_mg_set,     /* set */
@@ -783,7 +809,10 @@ MGVTBL sharedsv_scalar_vtbl = {
     0,                          /* clear */
     sharedsv_scalar_mg_free,    /* free */
     0,                          /* copy */
-    sharedsv_scalar_mg_dup      /* dup */
+    sharedsv_scalar_mg_dup,     /* dup */
+#ifdef MGf_LOCAL
+    sharedsv_scalar_mg_local,   /* local */
+#endif
 };
 
 /* ------------ PERL_MAGIC_tiedelem(p) functions -------------- */
@@ -917,7 +946,10 @@ MGVTBL sharedsv_elem_vtbl = {
     sharedsv_elem_mg_DELETE,    /* clear */
     0,                          /* free */
     0,                          /* copy */
-    sharedsv_elem_mg_dup        /* dup */
+    sharedsv_elem_mg_dup,       /* dup */
+#ifdef MGf_LOCAL
+    0,                          /* local */
+#endif
 };
 
 /* ------------ PERL_MAGIC_tied(P) functions -------------- */
@@ -1002,7 +1034,10 @@ MGVTBL sharedsv_array_vtbl = {
     sharedsv_array_mg_CLEAR,    /* clear */
     sharedsv_array_mg_free,     /* free */
     sharedsv_array_mg_copy,     /* copy */
-    sharedsv_array_mg_dup       /* dup */
+    sharedsv_array_mg_dup,      /* dup */
+#ifdef MGf_LOCAL
+    0,                          /* local */
+#endif
 };
 
 =for apidoc sharedsv_unlock

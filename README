@@ -1,4 +1,4 @@
-threads::shared version 0.96
+threads::shared version 0.97
 ============================
 
 This module needs Perl 5.8.0 or later compiled with USEITHREADS.
@@ -21,7 +21,7 @@ This module requires these other modules and libraries:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2001 Arthur Bergman <artur AT contiller DOT se>
+Copyright (C) 2001 Artur Bergman <sky AT crucially DOT net>
 Same licence as Perl.
 
 CPAN version produced by Jerry D. Hedden <jdhedden AT cpan DOT org>
