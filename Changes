@@ -1,5 +1,10 @@
 Revision history for Perl extension threads::shared.
 
+0.99 Sun Mar 19 17:38:52 EST 2006
+	- Use $ENV{PERL_CORE} in tests
+	- More XS code cleanups
+	- Eliminated use of Exporter
+
 0.98 Fri Mar 17 13:25:34 EST 2006
 	- XS code cleanup
 
@@ -14,6 +19,6 @@ Revision history for Perl extension threads::shared.
 	- Updated POD with discussion of bless()
 
 0.95 Fri Feb 03 16:46:00 2006
-	- Initial release to CPAN
+	- Initial (re-)release to CPAN
 	- 'bless' is now supported on shared refs
 

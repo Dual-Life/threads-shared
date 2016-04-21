@@ -1316,24 +1316,7 @@ share(SV *ref)
 
 
 void
-lock_enabled(SV *ref)
-    PROTOTYPE: \[$@%]
-    PREINIT:
-        SV *ssv;
-    CODE:
-        if (! SvROK(ref))
-            Perl_croak(aTHX_ "Argument to lock needs to be passed as ref");
-        ref = SvRV(ref);
-        if (SvROK(ref))
-            ref = SvRV(ref);
-        ssv = Perl_sharedsv_find(aTHX_ ref);
-        if (! ssv)
-           Perl_croak(aTHX_ "lock can only be used on shared values");
-        Perl_sharedsv_lock(aTHX_ ssv);
-
-
-void
-cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
+cond_wait(SV *ref_cond, SV *ref_lock = 0)
     PROTOTYPE: \[$@%];\[$@%]
     PREINIT:
         SV *ssv;
@@ -1384,7 +1367,7 @@ cond_wait_enabled(SV *ref_cond, SV *ref_lock = 0)
 
 
 int
-cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
+cond_timedwait(SV *ref_cond, double abs, SV *ref_lock = 0)
     PROTOTYPE: \[$@%]$;\[$@%]
     PREINIT:
         SV *ssv;
@@ -1439,7 +1422,7 @@ cond_timedwait_enabled(SV *ref_cond, double abs, SV *ref_lock = 0)
 
 
 void
-cond_signal_enabled(SV *ref)
+cond_signal(SV *ref)
     PROTOTYPE: \[$@%]
     PREINIT:
         SV *ssv;
@@ -1462,7 +1445,7 @@ cond_signal_enabled(SV *ref)
 
 
 void
-cond_broadcast_enabled(SV *ref)
+cond_broadcast(SV *ref)
     PROTOTYPE: \[$@%]
     PREINIT:
         SV *ssv;

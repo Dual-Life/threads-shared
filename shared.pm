@@ -5,43 +5,58 @@ use 5.008;
 use strict;
 use warnings;
 
+our $VERSION = '0.99';
+
 BEGIN {
-    require Exporter;
-    our @ISA = qw(Exporter);
-    our @EXPORT = qw(share is_shared cond_wait cond_timedwait
-                     cond_broadcast cond_signal);
+    # Declare that we have been loaded
+    $threads::shared::threads_shared = 1;
+}
 
-    our $VERSION = '0.98';
 
-    if ($threads::threads) {
-        *cond_wait      = \&cond_wait_enabled;
-        *cond_timedwait = \&cond_timedwait_enabled;
-        *cond_signal    = \&cond_signal_enabled;
-        *cond_broadcast = \&cond_broadcast_enabled;
-        *is_shared      = \&_id;
+# Load the XS code, if applicable
+if ($threads::threads) {
+    require XSLoader;
+    XSLoader::load('threads::shared', $VERSION);
 
-        require XSLoader;
-        XSLoader::load('threads::shared', $VERSION);
+    *is_shared = \&_id;
 
-        push(@EXPORT, 'bless');
-
-    } else {
-        # String eval is generally evil, but we don't want these subs to
-        # exist at all if 'threads' is not loaded successfully.
-        # Vivifying them conditionally this way saves on average about 4K
-        # of memory per thread.
-        eval <<'_MARKER_';
-            sub cond_wait      (\[$@%];\[$@%])  { undef }
-            sub cond_timedwait (\[$@%]$;\[$@%]) { undef }
-            sub cond_signal    (\[$@%])         { undef }
-            sub cond_broadcast (\[$@%])         { undef }
-            sub share          (\[$@%])         { return $_[0] }
-            sub is_shared      (\[$@%])         { undef }
+} else {
+    # String eval is generally evil, but we don't want these subs to
+    # exist at all if 'threads' is not loaded successfully.
+    # Vivifying them conditionally this way saves on average about 4K
+    # of memory per thread.
+    eval <<'_MARKER_';
+        sub share          (\[$@%])         { return $_[0] }
+        sub is_shared      (\[$@%])         { undef }
+        sub cond_wait      (\[$@%];\[$@%])  { undef }
+        sub cond_timedwait (\[$@%]$;\[$@%]) { undef }
+        sub cond_signal    (\[$@%])         { undef }
+        sub cond_broadcast (\[$@%])         { undef }
 _MARKER_
+}
+
+
+### Export ###
+
+sub import
+{
+    # Exported subroutines
+    my @EXPORT = qw(share is_shared cond_wait cond_timedwait
+                    cond_signal cond_broadcast);
+    if ($threads::threads) {
+        push(@EXPORT, 'bless');
+    }
+
+    # Export subroutine names
+    my $caller = caller();
+    foreach my $sym (@EXPORT) {
+        no strict 'refs';
+        *{$caller.'::'.$sym} = \&{$sym};
     }
 }
 
-$threads::shared::threads_shared = 1;
+
+### Methods, etc. ###
 
 sub threads::shared::tie::SPLICE
 {
@@ -59,7 +74,7 @@ threads::shared - Perl extension for sharing data structures between threads
 
 =head1 VERSION
 
-This document describes threads::shared version 0.98
+This document describes threads::shared version 0.99
 
 =head1 SYNOPSIS
 
@@ -353,7 +368,7 @@ L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
 Annotated POD for L<threads::shared>:
-L<http://annocpan.org/~JDHEDDEN/threads-shared-0.98/shared.pm>
+L<http://annocpan.org/~JDHEDDEN/threads-shared-0.99/shared.pm>
 
 L<threads>, L<perlthrtut>
 

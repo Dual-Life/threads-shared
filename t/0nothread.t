@@ -2,11 +2,9 @@ use strict;
 use warnings;
 
 BEGIN {
-    if (-d 't') {
-        chdir('t');
-    }
-    if (-d '../lib') {
-        push(@INC, '../lib');
+    if ($ENV{'PERL_CORE'}){
+        chdir 't';
+        unshift @INC, '../lib';
     }
     use Config;
     if (! $Config{'useithreads'}) {
@@ -72,7 +70,7 @@ sub array
 
 ok((require threads::shared),"Require module");
 
-if ($threads::shared::VERSION) {
+if ($threads::shared::VERSION && ! exists($ENV{'PERL_CORE'})) {
     diag('Testing threads::shared ' . $threads::shared::VERSION);
 }
 
