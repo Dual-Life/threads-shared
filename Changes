@@ -1,5 +1,11 @@
 Revision history for Perl extension threads::shared.
 
+1.26 Wed Jul 16 13:45:44 2008
+	- Conditionalize read-only tests for Perl < 5.8.3
+
+1.25 Fri Jul 11 17:04:47 2008
+	- Fix to shared_clone() for read-only objects
+
 1.24 Mon Jul  7 17:34:37 2008
 	- Support utf8 hash keys (bug #37149)
 	- Use standardized watchdog/timeout code in tests
