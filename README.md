@@ -1,2 +1,5 @@
 # threads-shared
 The 'threads-shared' module for Perl.
+
+This module is dual-lived in both the core Perl distribution and on CPAN.
+
