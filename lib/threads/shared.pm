@@ -646,6 +646,9 @@ to: L<http://rt.cpan.org/Public/Dist/Display.html?Name=threads-shared>
 
 =head1 SEE ALSO
 
+Code repository:
+L<https://github.com/Dual-Life/threads-shared>
+
 L<threads::shared> Discussion Forum on CPAN:
 L<http://www.cpanforum.com/dist/threads-shared>
 
