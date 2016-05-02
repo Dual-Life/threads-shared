@@ -646,11 +646,11 @@ to: L<http://rt.cpan.org/Public/Dist/Display.html?Name=threads-shared>
 
 =head1 SEE ALSO
 
+threads::shared on MetaCPAN:
+L<https://metacpan.org/release/threads-shared>
+
 Code repository:
 L<https://github.com/Dual-Life/threads-shared>
-
-L<threads::shared> Discussion Forum on CPAN:
-L<http://www.cpanforum.com/dist/threads-shared>
 
 L<threads>, L<perlthrtut>
 
@@ -659,6 +659,8 @@ L<http://www.perl.com/pub/a/2002/09/04/threads.html>
 
 Perl threads mailing list:
 L<http://lists.perl.org/list/ithreads.html>
+
+Sample code in the I<examples> directory of this distribution on CPAN.
 
 =head1 AUTHOR
 
