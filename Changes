@@ -3,6 +3,9 @@ Revision history for Perl extension threads::shared.
 -
 	-
 
+1.52 Mon May 16 18:46:52 2016
+	- Make t/test.pl compatible with Perls < 5.10 (again)
+
 1.51 Fri Apr 22 19:05:18 2016
 	- Documented that 'bless' does not propagate to nested shared items.
 
