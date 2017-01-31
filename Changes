@@ -1,7 +1,7 @@
 Revision history for Perl extension threads::shared.
 
 -
-	-
+	- Document issue with destructor not called on embedded shared objects
 
 1.54 Sat Dec 31 17:33:20 2016
 	- Fix Clang macro

@@ -7,8 +7,7 @@ use threads;
 use threads::shared;
 
 package My::Class; {
-    use threads::shared qw(share is_shared shared_clone);
-    use Scalar::Util qw(reftype blessed);
+    use threads::shared qw(share shared_clone);
 
     # Constructor
     sub new
@@ -35,6 +34,16 @@ package My::Class; {
         lock($self);
         $self->{$tag} = shared_clone($value);
     }
+
+    sub DESTROY
+    {
+        my $self = shift;
+        # Delete the contents of the object to ensure that
+        # embedded objects are also destroyed properly.
+        foreach my $key (keys(%$self)) {
+            delete($self->{$key});
+        }
+    }
 }
 
 
@@ -44,7 +53,7 @@ MAIN:
 {
     # Create an object containing some complex elements
     my $obj = My::Class->new('bar' => { 'ima' => 'hash' },
-                       'baz' => [ qw(shared array) ]);
+                             'baz' => [ qw(shared array) ]);
 
     # Create a thread
     threads->create(sub {
@@ -57,11 +66,15 @@ MAIN:
         # Add a complex field to the object
         $obj->set('funk' => { 'yet' => [ qw(another hash) ] });
 
+        # Embed one object in another
+        $obj->{'embedded'} = My::Class->new();
+
     })->join();
 
     # Show that the object picked up the data set by the thread
     print('Object has a ', join(' ', @{$obj->{'baz'}}), "\n");
     print('Object has yet ', join(' ', @{$obj->{'funk'}->{'yet'}}), "\n");
+    print('Object as an embedded object of type ', ref($obj->{'embedded'}), "\n");
 }
 
 exit(0);
@@ -103,7 +116,7 @@ Jerry D. Hedden, S<E<lt>jdhedden AT cpan DOT orgE<gt>>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 - 2009 Jerry D. Hedden. All rights reserved.
+Copyright 2006 - 2017 Jerry D. Hedden. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
