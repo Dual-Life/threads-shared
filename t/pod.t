@@ -66,4 +66,5 @@ perlfunc
 dualvar
 SV
 
+MetaCPAN
 __END__

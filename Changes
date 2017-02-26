@@ -1,6 +1,9 @@
 Revision history for Perl extension threads::shared.
 
 -
+	-
+
+1.55 Sun Feb 26 18:23:45 2017
 	- Document issue with destructor not called on embedded shared objects
 
 1.54 Sat Dec 31 17:33:20 2016
